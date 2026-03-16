@@ -17,7 +17,34 @@ SC2002 Group Assignment: Turn-Based Combat Arena
     - enemy action selection strategy
     - no ownership of battle state or wave lifecycle
 
- 
+### Package Layout
+- `arena.ui`
+    - `GameUI`, `CLIGameUI`
+- `arena.engine`
+    - `BattleEngine`, `WaveManager`
+- `arena.model.combatant`
+    - `Combatant`, `Player`, `Enemy`, `Warrior`, `Wizard`, `Goblin`, `Wolf`
+- `arena.model.action`
+    - `Action`, `BasicAttack`, `Defend`, `UseItem`, `UseSpecialSkill`
+- `arena.model.item`
+    - `Item`, `Potion`, `PowerStone`, `SmokeBomb`
+- `arena.model.effect`
+    - `StatusEffect`, `StunEffect`, `DefendBuff`, `SmokeBombEffect`
+- `arena.strategy`
+    - `TurnOrderStrategy`, `SpeedBasedTurnOrder`, `EnemyActionStrategy`, `BasicEnemyActionStrategy`
+
+```text
+src/arena/
+├── ui/
+├── engine/
+├── model/
+│   ├── combatant/
+│   ├── action/
+│   ├── item/
+│   └── effect/
+└── strategy/
+```
+
 
 ### UML diagram
 - mermaid (via extension `Markdown Preview Mermaid Support`)
