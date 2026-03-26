@@ -72,11 +72,10 @@ public class LanternaStartMenuApp {
             panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
             panel.addComponent(centered(new Button("New Game", () -> {
-                showMessage(screen, gui, "New Game is not connected yet.");
+                showMessage(screen, gui, "NOTICE", "New Game is not connected yet.");
             })));
             panel.addComponent(centered(new Button("View Controls", () -> {
-                showMessage(screen, gui,
-                    "Controls\n" +
+                showMessage(screen, gui, "CONTROLS",
                         "- Up/Down: Navigate\n" +
                         "- Enter: Confirm\n" +
                         "- Esc: Back/Close");
@@ -117,20 +116,16 @@ public class LanternaStartMenuApp {
         int optionsContentRows = 10;
         addVerticalPaddingTop(optionsPanel, dialogSize.getRows(), optionsContentRows);
         optionsPanel.addComponent(centered(new Label("╭─────────── OPTIONS ───────────╮")));
-        optionsPanel.addComponent(centered(new Label("│ Toggle display mode only      │")));
+        optionsPanel.addComponent(centered(new Label("│ Toggle display mode           │")));
         optionsPanel.addComponent(centered(new Label("╰───────────────────────────────╯")));
         optionsPanel.addComponent(new EmptySpace(new TerminalSize(1, 2)));
 
-        Label modeFeedback = new Label("Selected: " + (config.fullScreen ? "Fullscreen" : "Windowed"));
-        optionsPanel.addComponent(centered(new Button("Set Windowed", () -> {
-            config.fullScreen = false;
-            modeFeedback.setText("Selected: Windowed");
-        })));
-        optionsPanel.addComponent(centered(new Button("Set Fullscreen", () -> {
-            config.fullScreen = true;
-            modeFeedback.setText("Selected: Fullscreen");
-        })));
-        optionsPanel.addComponent(centered(modeFeedback));
+        final Button[] modeToggleButton = new Button[1];
+        modeToggleButton[0] = new Button(toggleModeLabel(config.fullScreen), () -> {
+            config.fullScreen = !config.fullScreen;
+            modeToggleButton[0].setLabel(toggleModeLabel(config.fullScreen));
+        });
+        optionsPanel.addComponent(centered(modeToggleButton[0]));
         optionsPanel.addComponent(centered(new Label("(Apply restarts UI session)")));
         optionsPanel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
@@ -145,7 +140,7 @@ public class LanternaStartMenuApp {
         gui.addWindowAndWait(optionsWindow);
     }
 
-    private static void showMessage(Screen screen, MultiWindowTextGUI gui, String text) {
+    private static void showMessage(Screen screen, MultiWindowTextGUI gui, String title, String text) {
 
         BasicWindow messageWindow = new BasicWindow();
         messageWindow.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
@@ -156,7 +151,7 @@ public class LanternaStartMenuApp {
         int messageLines = text.split("\\n").length;
         int messageContentRows = messageLines + 5;
         addVerticalPaddingTop(panel, dialogSize.getRows(), messageContentRows);
-        panel.addComponent(centered(new Label("╭─────────── CONTROLS ──────────╮")));
+        panel.addComponent(centered(new Label(formatDialogHeader(title))));
         for (String line : text.split("\\n")) {
             panel.addComponent(centered(new Label(line)));
         }
@@ -198,6 +193,22 @@ public class LanternaStartMenuApp {
         int dialogColumns = Math.min(WINDOWED_SIZE.getColumns(), Math.max(60, terminalSize.getColumns() - 2));
         int dialogRows = Math.min(WINDOWED_SIZE.getRows(), Math.max(20, terminalSize.getRows() - 2));
         return new TerminalSize(dialogColumns, dialogRows);
+    }
+
+    private static String toggleModeLabel(boolean fullScreen) {
+        return fullScreen ? "Window Mode: Fullscreen" : "Window Mode: Windowed";
+    }
+
+    private static String formatDialogHeader(String title) {
+        final int innerWidth = 29;
+        String normalized = title == null ? "" : title.trim();
+        if (normalized.length() > innerWidth) {
+            normalized = normalized.substring(0, innerWidth);
+        }
+        int totalPadding = innerWidth - normalized.length();
+        int leftPadding = totalPadding / 2;
+        int rightPadding = totalPadding - leftPadding;
+        return "╭" + "─".repeat(leftPadding) + " " + normalized + " " + "─".repeat(rightPadding) + "╮";
     }
 
     private static final class UiConfig {
