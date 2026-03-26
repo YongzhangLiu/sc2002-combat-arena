@@ -15,9 +15,9 @@ import com.googlecode.lanterna.TerminalSize;
 
 import arena.ui.DialogComposer;
 import arena.ui.GameSetup;
-import static arena.ui.LanternaStartMenuApp.fittedLine;
-import static arena.ui.LanternaStartMenuApp.fittedLines;
-import static arena.ui.LanternaStartMenuApp.dialogSizeForScreen;
+import static arena.ui.UiScreenSupport.fittedLine;
+import static arena.ui.UiScreenSupport.fittedLines;
+import static arena.ui.UiScreenSupport.dialogSizeForScreen;
 
 public class DifficultySelectionScreen {
     public static int open(

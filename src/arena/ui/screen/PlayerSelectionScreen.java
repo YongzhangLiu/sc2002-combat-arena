@@ -19,11 +19,11 @@ import arena.model.combatant.Warrior;
 import arena.model.combatant.Wizard;
 import arena.ui.DialogComposer;
 import arena.ui.GameSetup;
-import static arena.ui.LanternaStartMenuApp.addSpriteLines;
-import static arena.ui.LanternaStartMenuApp.combatantStatBlock;
-import static arena.ui.LanternaStartMenuApp.fittedLine;
-import static arena.ui.LanternaStartMenuApp.fittedLines;
-import static arena.ui.LanternaStartMenuApp.dialogSizeForScreen;
+import static arena.ui.UiScreenSupport.addSpriteLines;
+import static arena.ui.UiScreenSupport.combatantStatBlock;
+import static arena.ui.UiScreenSupport.fittedLine;
+import static arena.ui.UiScreenSupport.fittedLines;
+import static arena.ui.UiScreenSupport.dialogSizeForScreen;
 
 public class PlayerSelectionScreen {
     public static int open(

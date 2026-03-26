@@ -16,13 +16,11 @@ import com.googlecode.lanterna.TerminalSize;
 
 import arena.ui.DialogComposer;
 import arena.ui.GameSetup;
-import static arena.ui.LanternaStartMenuApp.addSpriteLines;
-import static arena.ui.LanternaStartMenuApp.fittedLine;
-import static arena.ui.LanternaStartMenuApp.dialogSizeForScreen;
+import static arena.ui.UiScreenSupport.addSpriteLines;
+import static arena.ui.UiScreenSupport.fittedLine;
+import static arena.ui.UiScreenSupport.dialogSizeForScreen;
 
 public class ItemSelectionScreen {
-    private static final int POTION_HEAL = 100;
-
     public static int open(
         Screen screen,
         MultiWindowTextGUI gui,

@@ -18,11 +18,11 @@ import arena.model.combatant.Combatant;
 import arena.model.combatant.Goblin;
 import arena.model.combatant.Wolf;
 import arena.ui.DialogComposer;
-import static arena.ui.LanternaStartMenuApp.addSpriteLines;
-import static arena.ui.LanternaStartMenuApp.combatantStatBlock;
-import static arena.ui.LanternaStartMenuApp.fittedLine;
-import static arena.ui.LanternaStartMenuApp.fittedLines;
-import static arena.ui.LanternaStartMenuApp.dialogSizeForScreen;
+import static arena.ui.UiScreenSupport.addSpriteLines;
+import static arena.ui.UiScreenSupport.combatantStatBlock;
+import static arena.ui.UiScreenSupport.fittedLine;
+import static arena.ui.UiScreenSupport.fittedLines;
+import static arena.ui.UiScreenSupport.dialogSizeForScreen;
 
 public class EnemyInformationScreen {
     public static int open(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode) {

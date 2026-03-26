@@ -1,9 +1,5 @@
 package arena.ui;
 
-import arena.model.combatant.Combatant;
-import arena.model.combatant.Warrior;
-import arena.model.combatant.Wizard;
-import arena.ui.GameSetup;
 import arena.ui.screen.PlayerSelectionScreen;
 import arena.ui.screen.ItemSelectionScreen;
 import arena.ui.screen.EnemyInformationScreen;
@@ -14,7 +10,6 @@ import com.googlecode.lanterna.gui2.BasicWindow;
 import com.googlecode.lanterna.gui2.Button;
 import com.googlecode.lanterna.gui2.DefaultWindowManager;
 import com.googlecode.lanterna.gui2.EmptySpace;
-import com.googlecode.lanterna.gui2.GridLayout;
 import com.googlecode.lanterna.gui2.Label;
 import com.googlecode.lanterna.gui2.LinearLayout;
 import com.googlecode.lanterna.gui2.MultiWindowTextGUI;
@@ -24,9 +19,11 @@ import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.function.Consumer;
+
+import static arena.ui.UiScreenSupport.dialogSizeForScreen;
+import static arena.ui.UiScreenSupport.fittedLine;
 
 public class LanternaStartMenuApp {
     private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
@@ -35,13 +32,19 @@ public class LanternaStartMenuApp {
         UiConfig config = new UiConfig(false, false);
         applyArgs(args, config);
 
+        launch(config.fullScreen, config.asciiMode, null);
+    }
+
+    public static void launch(boolean fullScreen, boolean asciiMode, Consumer<GameSetup> onSetupReady) throws IOException {
+        UiConfig config = new UiConfig(fullScreen, asciiMode);
+
         boolean keepRunning = true;
         while (keepRunning) {
-            keepRunning = runSession(config);
+            keepRunning = runSession(config, onSetupReady);
         }
     }
 
-    private static boolean runSession(UiConfig config) throws IOException {
+    private static boolean runSession(UiConfig config, Consumer<GameSetup> onSetupReady) throws IOException {
         DefaultTerminalFactory terminalFactory = new DefaultTerminalFactory();
         if (!config.fullScreen) {
             terminalFactory.setInitialTerminalSize(WINDOWED_SIZE);
@@ -49,6 +52,7 @@ public class LanternaStartMenuApp {
 
         Screen screen = terminalFactory.createScreen();
         screen.startScreen();
+        setMouseReporting(screen, true);
 
         SessionResult result = new SessionResult(false, false);
         TerminalSize terminalSize = screen.getTerminalSize();
@@ -87,16 +91,14 @@ public class LanternaStartMenuApp {
             panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
             panel.addComponent(DialogComposer.centered(new Button("New Game", () -> {
-                startNewGameFlow(screen, gui, config.fullScreen, config.asciiMode);
+                startNewGameFlow(screen, gui, config.fullScreen, config.asciiMode, onSetupReady);
             })));
             panel.addComponent(DialogComposer.centered(new Button("View Controls", () -> {
                 showMessage(screen, gui, config.fullScreen, config.asciiMode, "CONTROLS",
                         "- Up/Down: Navigate\n" +
+                        "- Mouse: Click buttons\n" +
                         "- Enter: Confirm\n" +
                         "- Esc: Back/Close");
-            })));
-            panel.addComponent(DialogComposer.centered(new Button("Sprite Demo", () -> {
-                showSpriteDemo(screen, gui, config.fullScreen, config.asciiMode);
             })));
             panel.addComponent(DialogComposer.centered(new Button("Options", () -> {
                 openOptions(screen, gui, config, result);
@@ -114,6 +116,7 @@ public class LanternaStartMenuApp {
 
             gui.addWindowAndWait(window);
         } finally {
+            setMouseReporting(screen, false);
             screen.stopScreen();
         }
 
@@ -203,38 +206,7 @@ public class LanternaStartMenuApp {
         return fitted;
     }
 
-    public static String fittedLine(String line, int maxColumns) {
-        if (line.length() <= maxColumns) {
-            return line;
-        }
-        if (maxColumns <= 3) {
-            return ".".repeat(Math.max(1, maxColumns));
-        }
-        return line.substring(0, maxColumns - 3) + "...";
-    }
-
-    private static void showSpriteDemo(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode) {
-        try {
-            TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
-            int maxSpriteWidth = Math.max(8, dialogSize.getColumns() - 12);
-            int maxTextRows = Math.max(3, dialogSize.getRows() - 5);
-
-            AsciiSprite arena = SpriteCatalog.loadArenaStrip("forest", maxSpriteWidth);
-            AsciiSprite warrior = SpriteCatalog.load("player", "warrior", "normal");
-            AsciiSprite wizard = SpriteCatalog.load("player", "wizard", "normal");
-            AsciiSprite goblin = SpriteCatalog.load("enemy", "goblin", "normal");
-            AsciiSprite wolf = SpriteCatalog.load("enemy", "wolf", "normal");
-
-            String spriteText = buildSpriteDemoText(arena, warrior, wizard, goblin, wolf, maxSpriteWidth, maxTextRows);
-            showMessage(screen, gui, fullScreen, asciiMode, "SPRITE DEMO", spriteText);
-        } catch (IOException exception) {
-            showMessage(screen, gui, fullScreen, asciiMode, "ERROR",
-                "Failed to load sprite files from assets/sprites.\n" +
-                    "Details: " + exception.getMessage());
-        }
-    }
-
-    static void startNewGameFlow(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode) {
+    static void startNewGameFlow(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode, Consumer<GameSetup> onSetupReady) {
         GameSetup setup = new GameSetup("Warrior", "Potion", "Easy");
 
         int currentScreen = 0; // 0: player, 1: item, 2: enemy, 3: difficulty
@@ -253,20 +225,11 @@ public class LanternaStartMenuApp {
             }
         }
 
+        if (onSetupReady != null) {
+            onSetupReady.accept(setup);
+            return;
+        }
         showMessage(screen, gui, fullScreen, asciiMode, "READY", buildSetupSummary(setup));
-    }
-
-    public static String[] fittedLines(String text, int maxRows, int maxColumns) {
-        String[] rawLines = text.split("\\n", -1);
-        int rows = Math.min(rawLines.length, Math.max(1, maxRows));
-        String[] output = new String[rows];
-        for (int i = 0; i < rows; i++) {
-            output[i] = fittedLine(rawLines[i], maxColumns);
-        }
-        if (rawLines.length > rows) {
-            output[rows - 1] = fittedLine("...", maxColumns);
-        }
-        return output;
     }
 
     private static String buildSetupSummary(GameSetup setup) {
@@ -275,116 +238,6 @@ public class LanternaStartMenuApp {
             + "Difficulty: " + setup.difficulty + "\n"
             + "\n"
             + "Next: connect setup to battle engine flow.";
-    }
-
-    private static String padRight(String value, int width) {
-        if (value.length() >= width) {
-            return value;
-        }
-        return value + " ".repeat(width - value.length());
-    }
-
-    public static void addSpriteLines(Panel panel, String category, String name, int maxColumns, int maxRows) {
-        try {
-            AsciiSprite sprite = SpriteCatalog.load(category, name, "normal");
-            if (sprite.getWidth() > maxColumns || sprite.getHeight() > maxRows) {
-                panel.addComponent(DialogComposer.centered(new Label("[" + name + "]")));
-                return;
-            }
-            int rows = Math.min(maxRows, sprite.getHeight());
-            for (int index = 0; index < rows; index++) {
-                panel.addComponent(DialogComposer.centered(new Label(fittedLine(sprite.getLines().get(index), maxColumns))));
-            }
-            for (int index = rows; index < maxRows; index++) {
-                panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-            }
-        } catch (IOException exception) {
-            panel.addComponent(DialogComposer.centered(new Label("[" + name + "]")));
-        }
-    }
-
-    public static String combatantStatBlock(Combatant combatant) {
-        return "HP: " + combatant.getMaxHp() + "\n"
-            + "ATK: " + combatant.getAttack() + "\n"
-            + "DEF: " + combatant.getBaseDefense() + "\n"
-            + "SPD: " + combatant.getSpeed();
-    }
-
-    private static String buildSpriteDemoText(
-        AsciiSprite arena,
-        AsciiSprite warrior,
-        AsciiSprite wizard,
-        AsciiSprite goblin,
-        AsciiSprite wolf,
-        int maxSpriteWidth,
-        int maxTextRows
-    ) {
-        List<DemoSection> sections = new ArrayList<>();
-        sections.add(new DemoSection("Arena", arena, "[Arena unavailable]", false));
-        sections.add(new DemoSection("Warrior", warrior, "[Warrior model hidden: not enough space]", true));
-        sections.add(new DemoSection("Wizard", wizard, "[Wizard model hidden: not enough space]", true));
-        sections.add(new DemoSection("Goblin", goblin, "[Goblin model hidden: not enough space]", true));
-        sections.add(new DemoSection("Wolf", wolf, "[Wolf model hidden: not enough space]", true));
-
-        for (DemoSection section : sections) {
-            if (section.sprite == null) {
-                section.useFallback = true;
-                continue;
-            }
-            if (section.checkWidth && section.sprite.getWidth() > maxSpriteWidth) {
-                section.useFallback = true;
-            }
-        }
-
-        while (estimateRows(sections) > maxTextRows) {
-            int index = findLastVisibleSpriteSection(sections);
-            if (index < 0) {
-                break;
-            }
-            sections.get(index).useFallback = true;
-        }
-
-        StringBuilder output = new StringBuilder();
-        for (int index = 0; index < sections.size(); index++) {
-            DemoSection section = sections.get(index);
-            output.append(section.title).append(":\n");
-            if (section.useFallback || section.sprite == null) {
-                output.append(section.fallbackText);
-            } else {
-                output.append(section.sprite.toMultilineText());
-            }
-            if (index < sections.size() - 1) {
-                output.append("\n\n");
-            }
-        }
-        return output.toString();
-    }
-
-    private static int estimateRows(List<DemoSection> sections) {
-        int rows = 0;
-        for (int index = 0; index < sections.size(); index++) {
-            DemoSection section = sections.get(index);
-            rows += 1;
-            if (section.useFallback || section.sprite == null) {
-                rows += 1;
-            } else {
-                rows += section.sprite.getHeight();
-            }
-            if (index < sections.size() - 1) {
-                rows += 1;
-            }
-        }
-        return rows;
-    }
-
-    private static int findLastVisibleSpriteSection(List<DemoSection> sections) {
-        for (int index = sections.size() - 1; index >= 0; index--) {
-            DemoSection section = sections.get(index);
-            if (!section.useFallback && section.sprite != null && section.checkWidth) {
-                return index;
-            }
-        }
-        return -1;
     }
 
     private static void applyArgs(String[] args, UiConfig config) {
@@ -398,15 +251,6 @@ public class LanternaStartMenuApp {
         }
     }
 
-    public static TerminalSize dialogSizeForScreen(Screen screen, boolean fullScreen) {
-        TerminalSize terminalSize = screen.getTerminalSize();
-        TerminalSize preferred = fullScreen ? terminalSize : WINDOWED_SIZE;
-        TerminalSize bounded = fitToTerminal(terminalSize, preferred);
-        int dialogColumns = Math.max(20, bounded.getColumns());
-        int dialogRows = Math.max(10, bounded.getRows());
-        return new TerminalSize(dialogColumns, dialogRows);
-    }
-
     private static TerminalSize fitToTerminal(TerminalSize terminalSize, TerminalSize preferred) {
         int availableColumns = Math.max(20, terminalSize.getColumns() - 2);
         int availableRows = Math.max(10, terminalSize.getRows() - 2);
@@ -417,6 +261,11 @@ public class LanternaStartMenuApp {
 
     private static String toggleModeLabel(boolean fullScreen) {
         return fullScreen ? "Window Mode: Fullscreen" : "Window Mode: Windowed";
+    }
+
+    private static void setMouseReporting(Screen screen, boolean enabled) {
+        // Lanterna handles mouse integration at GUI/widget level when the terminal supports it.
+        // Keep this hook for future terminal-specific toggles without breaking compatibility.
     }
 
     private static final class UiConfig {
@@ -436,22 +285,6 @@ public class LanternaStartMenuApp {
         private SessionResult(boolean restartRequested, boolean exitRequested) {
             this.restartRequested = restartRequested;
             this.exitRequested = exitRequested;
-        }
-    }
-
-    private static final class DemoSection {
-        private final String title;
-        private final AsciiSprite sprite;
-        private final String fallbackText;
-        private final boolean checkWidth;
-        private boolean useFallback;
-
-        private DemoSection(String title, AsciiSprite sprite, String fallbackText, boolean checkWidth) {
-            this.title = title;
-            this.sprite = sprite;
-            this.fallbackText = fallbackText;
-            this.checkWidth = checkWidth;
-            this.useFallback = false;
         }
     }
 
