@@ -16,14 +16,12 @@ import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.logging.Logger;
 
 public class LanternaStartMenuApp {
-    private static final TerminalSize WINDOWED_SIZE = new TerminalSize(500, 42);
-    private static final Logger LOGGER = Logger.getLogger(LanternaStartMenuApp.class.getName());
+    private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
 
     public static void main(String[] args) throws IOException {
-        UiConfig config = new UiConfig(false);
+        UiConfig config = new UiConfig(false, false);
         applyArgs(args, config);
 
         boolean keepRunning = true;
@@ -61,36 +59,36 @@ public class LanternaStartMenuApp {
 
             Panel panel = new Panel(new LinearLayout());
             int mainContentRows = 11;
-            addVerticalPaddingTop(panel, viewportRows, mainContentRows);
+            DialogComposer.addVerticalPaddingTop(panel, viewportRows, mainContentRows);
 
-            panel.addComponent(centered(new Label("╭──────────────────────────────╮")));
-            panel.addComponent(centered(new Label("│        COMBAT  ARENA         │")));
-            panel.addComponent(centered(new Label("╰──────────────────────────────╯")));
+            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(30, config.asciiMode))));
+            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("COMBAT  ARENA", 30, config.asciiMode))));
+            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(30, config.asciiMode))));
             panel.addComponent(new EmptySpace(new TerminalSize(1, 2)));
 
-            panel.addComponent(centered(new Label("Display: " + (config.fullScreen ? "Fullscreen" : "Windowed"))));
+            panel.addComponent(DialogComposer.centered(new Label("Display: " + (config.fullScreen ? "Fullscreen" : "Windowed"))));
             panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
-            panel.addComponent(centered(new Button("New Game", () -> {
-                showMessage(screen, gui, "NOTICE", "New Game is not connected yet.");
+            panel.addComponent(DialogComposer.centered(new Button("New Game", () -> {
+                showMessage(screen, gui, config.fullScreen, config.asciiMode, "NOTICE", "New Game is not connected yet.");
             })));
-            panel.addComponent(centered(new Button("View Controls", () -> {
-                showMessage(screen, gui, "CONTROLS",
+            panel.addComponent(DialogComposer.centered(new Button("View Controls", () -> {
+                showMessage(screen, gui, config.fullScreen, config.asciiMode, "CONTROLS",
                         "- Up/Down: Navigate\n" +
                         "- Enter: Confirm\n" +
                         "- Esc: Back/Close");
             })));
-            panel.addComponent(centered(new Button("Options", () -> {
+            panel.addComponent(DialogComposer.centered(new Button("Options", () -> {
                 openOptions(screen, gui, config, result);
                 if (result.restartRequested) {
                     window.close();
                 }
             })));
-            panel.addComponent(centered(new Button("Exit", () -> {
+            panel.addComponent(DialogComposer.centered(new Button("Exit", () -> {
                 result.exitRequested = true;
                 window.close();
             })));
-            addVerticalPaddingBottom(panel, viewportRows, mainContentRows);
+            DialogComposer.addVerticalPaddingBottom(panel, viewportRows, mainContentRows);
 
             window.setComponent(panel);
 
@@ -109,15 +107,15 @@ public class LanternaStartMenuApp {
 
         BasicWindow optionsWindow = new BasicWindow();
         optionsWindow.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
-        TerminalSize dialogSize = dialogSizeForScreen(screen);
+        TerminalSize dialogSize = dialogSizeForScreen(screen, config.fullScreen);
         optionsWindow.setFixedSize(dialogSize);
 
         Panel optionsPanel = new Panel(new LinearLayout());
         int optionsContentRows = 10;
-        addVerticalPaddingTop(optionsPanel, dialogSize.getRows(), optionsContentRows);
-        optionsPanel.addComponent(centered(new Label("╭─────────── OPTIONS ───────────╮")));
-        optionsPanel.addComponent(centered(new Label("│ Toggle display mode           │")));
-        optionsPanel.addComponent(centered(new Label("╰───────────────────────────────╯")));
+        DialogComposer.addVerticalPaddingTop(optionsPanel, dialogSize.getRows(), optionsContentRows);
+        optionsPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(30, config.asciiMode))));
+        optionsPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("OPTIONS", 30, config.asciiMode))));
+        optionsPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(30, config.asciiMode))));
         optionsPanel.addComponent(new EmptySpace(new TerminalSize(1, 2)));
 
         final Button[] modeToggleButton = new Button[1];
@@ -125,40 +123,42 @@ public class LanternaStartMenuApp {
             config.fullScreen = !config.fullScreen;
             modeToggleButton[0].setLabel(toggleModeLabel(config.fullScreen));
         });
-        optionsPanel.addComponent(centered(modeToggleButton[0]));
-        optionsPanel.addComponent(centered(new Label("(Apply restarts UI session)")));
+        optionsPanel.addComponent(DialogComposer.centered(modeToggleButton[0]));
+        optionsPanel.addComponent(DialogComposer.centered(new Label("(Apply restarts UI session)")));
         optionsPanel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
-        optionsPanel.addComponent(centered(new Button("Apply and Return", () -> {
+        optionsPanel.addComponent(DialogComposer.centered(new Button("Apply and Return", () -> {
             result.restartRequested = true;
             optionsWindow.close();
         })));
-        optionsPanel.addComponent(centered(new Button("Back", optionsWindow::close)));
-        addVerticalPaddingBottom(optionsPanel, dialogSize.getRows(), optionsContentRows);
+        optionsPanel.addComponent(DialogComposer.centered(new Button("Back", optionsWindow::close)));
+        DialogComposer.addVerticalPaddingBottom(optionsPanel, dialogSize.getRows(), optionsContentRows);
 
         optionsWindow.setComponent(optionsPanel);
         gui.addWindowAndWait(optionsWindow);
     }
 
-    private static void showMessage(Screen screen, MultiWindowTextGUI gui, String title, String text) {
+    private static void showMessage(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode, String title, String text) {
 
         BasicWindow messageWindow = new BasicWindow();
         messageWindow.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
-        TerminalSize dialogSize = dialogSizeForScreen(screen);
+        TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
         messageWindow.setFixedSize(dialogSize);
 
         Panel panel = new Panel(new LinearLayout());
         int messageLines = text.split("\\n").length;
         int messageContentRows = messageLines + 5;
-        addVerticalPaddingTop(panel, dialogSize.getRows(), messageContentRows);
-        panel.addComponent(centered(new Label(formatDialogHeader(title))));
+        DialogComposer.addVerticalPaddingTop(panel, dialogSize.getRows(), messageContentRows);
+        String headerLine = DialogComposer.formatDialogHeader(title, asciiMode);
+        panel.addComponent(DialogComposer.centered(new Label(headerLine)));
         for (String line : text.split("\\n")) {
-            panel.addComponent(centered(new Label(line)));
+            panel.addComponent(DialogComposer.centered(new Label(line)));
         }
-        panel.addComponent(centered(new Label("╰───────────────────────────────╯")));
+        int messageBorderWidth = Math.max(1, headerLine.length() - 2);
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(messageBorderWidth, asciiMode))));
         panel.addComponent(new EmptySpace(new TerminalSize(1, 2)));
-        panel.addComponent(centered(new Button("OK", messageWindow::close)));
-        addVerticalPaddingBottom(panel, dialogSize.getRows(), messageContentRows);
+        panel.addComponent(DialogComposer.centered(new Button("OK", messageWindow::close)));
+        DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), messageContentRows);
 
         messageWindow.setComponent(panel);
         gui.addWindowAndWait(messageWindow);
@@ -169,26 +169,16 @@ public class LanternaStartMenuApp {
             if ("--fullscreen".equals(arg)) {
                 config.fullScreen = true;
             }
+            if ("--ascii".equals(arg)) {
+                config.asciiMode = true;
+            }
         }
     }
 
-    private static <T extends com.googlecode.lanterna.gui2.Component> T centered(T component) {
-        component.setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center));
-        return component;
-    }
-
-    private static void addVerticalPaddingTop(Panel panel, int viewportRows, int contentRows) {
-        int topRows = Math.max(1, (viewportRows - contentRows) / 2);
-        panel.addComponent(new EmptySpace(new TerminalSize(1, topRows)));
-    }
-
-    private static void addVerticalPaddingBottom(Panel panel, int viewportRows, int contentRows) {
-        int topRows = Math.max(1, (viewportRows - contentRows) / 2);
-        int bottomRows = Math.max(1, viewportRows - contentRows - topRows);
-        panel.addComponent(new EmptySpace(new TerminalSize(1, bottomRows)));
-    }
-
-    private static TerminalSize dialogSizeForScreen(Screen screen) {
+    private static TerminalSize dialogSizeForScreen(Screen screen, boolean fullScreen) {
+        if (!fullScreen) {
+            return WINDOWED_SIZE;
+        }
         TerminalSize terminalSize = screen.getTerminalSize();
         int dialogColumns = Math.min(WINDOWED_SIZE.getColumns(), Math.max(60, terminalSize.getColumns() - 2));
         int dialogRows = Math.min(WINDOWED_SIZE.getRows(), Math.max(20, terminalSize.getRows() - 2));
@@ -199,23 +189,13 @@ public class LanternaStartMenuApp {
         return fullScreen ? "Window Mode: Fullscreen" : "Window Mode: Windowed";
     }
 
-    private static String formatDialogHeader(String title) {
-        final int innerWidth = 29;
-        String normalized = title == null ? "" : title.trim();
-        if (normalized.length() > innerWidth) {
-            normalized = normalized.substring(0, innerWidth);
-        }
-        int totalPadding = innerWidth - normalized.length();
-        int leftPadding = totalPadding / 2;
-        int rightPadding = totalPadding - leftPadding;
-        return "╭" + "─".repeat(leftPadding) + " " + normalized + " " + "─".repeat(rightPadding) + "╮";
-    }
-
     private static final class UiConfig {
         private boolean fullScreen;
+        private boolean asciiMode;
 
-        private UiConfig(boolean fullScreen) {
+        private UiConfig(boolean fullScreen, boolean asciiMode) {
             this.fullScreen = fullScreen;
+            this.asciiMode = asciiMode;
         }
     }
 
