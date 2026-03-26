@@ -4,8 +4,14 @@ import arena.ui.screen.PlayerSelectionScreen;
 import arena.ui.screen.ItemSelectionScreen;
 import arena.ui.screen.EnemyInformationScreen;
 import arena.ui.screen.DifficultySelectionScreen;
+import com.googlecode.lanterna.bundle.LanternaThemes;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
+import com.googlecode.lanterna.graphics.DelegatingTheme;
+import com.googlecode.lanterna.graphics.DelegatingThemeDefinition;
+import com.googlecode.lanterna.graphics.Theme;
+import com.googlecode.lanterna.graphics.ThemeDefinition;
+import com.googlecode.lanterna.graphics.ThemeStyle;
 import com.googlecode.lanterna.gui2.BasicWindow;
 import com.googlecode.lanterna.gui2.Button;
 import com.googlecode.lanterna.gui2.DefaultWindowManager;
@@ -16,7 +22,11 @@ import com.googlecode.lanterna.gui2.MultiWindowTextGUI;
 import com.googlecode.lanterna.gui2.Panel;
 import com.googlecode.lanterna.gui2.Window;
 import com.googlecode.lanterna.screen.Screen;
+import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
+import com.googlecode.lanterna.terminal.ExtendedTerminal;
+import com.googlecode.lanterna.terminal.MouseCaptureMode;
+import com.googlecode.lanterna.terminal.Terminal;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -68,6 +78,7 @@ public class LanternaStartMenuApp {
                 new DefaultWindowManager(),
                 new EmptySpace(TextColor.ANSI.DEFAULT)
             );
+            applyUniformButtonTheme(gui);
 
             BasicWindow window = new BasicWindow();
             window.setHints(config.fullScreen
@@ -263,9 +274,45 @@ public class LanternaStartMenuApp {
         return fullScreen ? "Window Mode: Fullscreen" : "Window Mode: Windowed";
     }
 
+    private static void applyUniformButtonTheme(MultiWindowTextGUI gui) {
+        Theme baseTheme = LanternaThemes.getDefaultTheme();
+        gui.setTheme(new DelegatingTheme(baseTheme) {
+            @Override
+            public ThemeDefinition getDefinition(Class<?> componentClass) {
+                ThemeDefinition original = super.getDefinition(componentClass);
+                if (!Button.class.equals(componentClass)) {
+                    return original;
+                }
+                return new DelegatingThemeDefinition(original) {
+                    @Override
+                    public ThemeStyle getPreLight() {
+                        return getNormal();
+                    }
+                };
+            }
+        });
+    }
+
     private static void setMouseReporting(Screen screen, boolean enabled) {
-        // Lanterna handles mouse integration at GUI/widget level when the terminal supports it.
-        // Keep this hook for future terminal-specific toggles without breaking compatibility.
+        if (!(screen instanceof TerminalScreen terminalScreen)) {
+            return;
+        }
+
+        try {
+            Terminal terminal = terminalScreen.getTerminal();
+            if (enabled && terminal instanceof ExtendedTerminal extendedTerminal) {
+                extendedTerminal.setMouseCaptureMode(MouseCaptureMode.CLICK_RELEASE_DRAG_MOVE);
+                return;
+            }
+
+            String sequence = enabled
+                ? "\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1006h\u001b[?1015h"
+                : "\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1006l\u001b[?1015l";
+            terminal.putString(sequence);
+            terminal.flush();
+        } catch (IOException exception) {
+            // Some terminals do not support this sequence; fail open for keyboard navigation.
+        }
     }
 
     private static final class UiConfig {
