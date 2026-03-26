@@ -149,12 +149,13 @@ public class LanternaStartMenuApp {
         messageWindow.setFixedSize(dialogSize);
 
         Panel panel = new Panel(new LinearLayout());
-        int messageLines = text.split("\\n").length;
+        String[] displayLines = fittedMessageLines(text, dialogSize);
+        int messageLines = displayLines.length;
         int messageContentRows = messageLines + 5;
         DialogComposer.addVerticalPaddingTop(panel, dialogSize.getRows(), messageContentRows);
         String headerLine = DialogComposer.formatDialogHeader(title, asciiMode);
         panel.addComponent(DialogComposer.centered(new Label(headerLine)));
-        for (String line : text.split("\\n")) {
+        for (String line : displayLines) {
             panel.addComponent(DialogComposer.centered(new Label(line)));
         }
         int messageBorderWidth = Math.max(1, headerLine.length() - 2);
@@ -167,16 +168,31 @@ public class LanternaStartMenuApp {
         gui.addWindowAndWait(messageWindow);
     }
 
+    private static String[] fittedMessageLines(String text, TerminalSize dialogSize) {
+        String[] rawLines = text.split("\\n", -1);
+        int maxTextRows = Math.max(1, dialogSize.getRows() - 5);
+        if (rawLines.length <= maxTextRows) {
+            return rawLines;
+        }
+
+        String[] fitted = new String[maxTextRows];
+        int visibleRows = Math.max(1, maxTextRows - 1);
+        System.arraycopy(rawLines, 0, fitted, 0, visibleRows);
+        fitted[maxTextRows - 1] = "...";
+        return fitted;
+    }
+
     private static void showSpriteDemo(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode) {
         try {
             TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
             int maxSpriteWidth = Math.max(30, dialogSize.getColumns() - 12);
 
-            AsciiSprite arena = SpriteCatalog.loadBest("arena", "forest", maxSpriteWidth, 2);
+            AsciiSprite arena = SpriteCatalog.loadBestArenaStrip("forest", maxSpriteWidth, 2);
             AsciiSprite warrior = SpriteCatalog.loadBest("player", "warrior", maxSpriteWidth, 8);
             AsciiSprite goblin = SpriteCatalog.loadBest("enemy", "goblin", maxSpriteWidth, 8);
+            AsciiSprite wolf = SpriteCatalog.loadBest("enemy", "wolf", maxSpriteWidth, 8);
 
-            String spriteText = buildSpriteDemoText(arena, warrior, goblin);
+            String spriteText = buildSpriteDemoText(arena, warrior, goblin, wolf);
             showMessage(screen, gui, fullScreen, asciiMode, "SPRITE DEMO", spriteText);
         } catch (IOException exception) {
             showMessage(screen, gui, fullScreen, asciiMode, "ERROR",
@@ -185,13 +201,15 @@ public class LanternaStartMenuApp {
         }
     }
 
-    private static String buildSpriteDemoText(AsciiSprite arena, AsciiSprite warrior, AsciiSprite goblin) {
+    private static String buildSpriteDemoText(AsciiSprite arena, AsciiSprite warrior, AsciiSprite goblin, AsciiSprite wolf) {
         return "Arena:\n"
             + arena.toMultilineText()
             + "\n\nWarrior:\n"
             + warrior.toMultilineText()
             + "\n\nGoblin:\n"
-            + goblin.toMultilineText();
+            + goblin.toMultilineText()
+            + "\n\nWolf:\n"
+            + wolf.toMultilineText();
     }
 
     private static void applyArgs(String[] args, UiConfig config) {

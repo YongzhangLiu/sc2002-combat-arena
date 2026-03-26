@@ -16,14 +16,18 @@ public final class DialogComposer {
     }
 
     public static void addVerticalPaddingTop(Panel panel, int viewportRows, int contentRows) {
-        int topRows = Math.max(1, (viewportRows - contentRows) / 2);
-        panel.addComponent(new EmptySpace(new TerminalSize(1, topRows)));
+        int topRows = Math.max(0, (viewportRows - contentRows) / 2);
+        if (topRows > 0) {
+            panel.addComponent(new EmptySpace(new TerminalSize(1, topRows)));
+        }
     }
 
     public static void addVerticalPaddingBottom(Panel panel, int viewportRows, int contentRows) {
-        int topRows = Math.max(1, (viewportRows - contentRows) / 2);
-        int bottomRows = Math.max(1, viewportRows - contentRows - topRows);
-        panel.addComponent(new EmptySpace(new TerminalSize(1, bottomRows)));
+        int topRows = Math.max(0, (viewportRows - contentRows) / 2);
+        int bottomRows = Math.max(0, viewportRows - contentRows - topRows);
+        if (bottomRows > 0) {
+            panel.addComponent(new EmptySpace(new TerminalSize(1, bottomRows)));
+        }
     }
 
     public static String formatDialogHeader(String title, boolean asciiMode) {
