@@ -15,6 +15,17 @@ package arena.engine;
 public interface BattleEngineFacade {
 
     /**
+     * Build initial setup state for loading/selection screens.
+     * Includes selectable players, difficulties, items, and preview enemy pools.
+     */
+    BattleViewState buildInitializationState();
+
+    /**
+     * Apply initialization selections from UI and return updated setup/battle state.
+     */
+    BattleViewState applyInitializationSelection(PlayerCommand command);
+
+    /**
      * Get current battle state snapshot for rendering.
      * Read-only; UI must never mutate.
      */

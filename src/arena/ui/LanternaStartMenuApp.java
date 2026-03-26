@@ -58,7 +58,7 @@ public class LanternaStartMenuApp {
             }
 
             Panel panel = new Panel(new LinearLayout());
-            int mainContentRows = 11;
+            int mainContentRows = 12;
             DialogComposer.addVerticalPaddingTop(panel, viewportRows, mainContentRows);
 
             panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(30, config.asciiMode))));
@@ -77,6 +77,9 @@ public class LanternaStartMenuApp {
                         "- Up/Down: Navigate\n" +
                         "- Enter: Confirm\n" +
                         "- Esc: Back/Close");
+            })));
+            panel.addComponent(DialogComposer.centered(new Button("Sprite Demo", () -> {
+                showSpriteDemo(screen, gui, config.fullScreen, config.asciiMode);
             })));
             panel.addComponent(DialogComposer.centered(new Button("Options", () -> {
                 openOptions(screen, gui, config, result);
@@ -162,6 +165,33 @@ public class LanternaStartMenuApp {
 
         messageWindow.setComponent(panel);
         gui.addWindowAndWait(messageWindow);
+    }
+
+    private static void showSpriteDemo(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode) {
+        try {
+            TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
+            int maxSpriteWidth = Math.max(30, dialogSize.getColumns() - 12);
+
+            AsciiSprite arena = SpriteCatalog.loadBest("arena", "forest", maxSpriteWidth, 2);
+            AsciiSprite warrior = SpriteCatalog.loadBest("player", "warrior", maxSpriteWidth, 8);
+            AsciiSprite goblin = SpriteCatalog.loadBest("enemy", "goblin", maxSpriteWidth, 8);
+
+            String spriteText = buildSpriteDemoText(arena, warrior, goblin);
+            showMessage(screen, gui, fullScreen, asciiMode, "SPRITE DEMO", spriteText);
+        } catch (IOException exception) {
+            showMessage(screen, gui, fullScreen, asciiMode, "ERROR",
+                "Failed to load sprite files from assets/sprites.\n" +
+                    "Details: " + exception.getMessage());
+        }
+    }
+
+    private static String buildSpriteDemoText(AsciiSprite arena, AsciiSprite warrior, AsciiSprite goblin) {
+        return "Arena:\n"
+            + arena.toMultilineText()
+            + "\n\nWarrior:\n"
+            + warrior.toMultilineText()
+            + "\n\nGoblin:\n"
+            + goblin.toMultilineText();
     }
 
     private static void applyArgs(String[] args, UiConfig config) {
