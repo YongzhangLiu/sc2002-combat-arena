@@ -1,11 +1,17 @@
 package arena.ui;
 
+import arena.model.combatant.Combatant;
+import arena.model.combatant.Goblin;
+import arena.model.combatant.Warrior;
+import arena.model.combatant.Wizard;
+import arena.model.combatant.Wolf;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.BasicWindow;
 import com.googlecode.lanterna.gui2.Button;
 import com.googlecode.lanterna.gui2.DefaultWindowManager;
 import com.googlecode.lanterna.gui2.EmptySpace;
+import com.googlecode.lanterna.gui2.GridLayout;
 import com.googlecode.lanterna.gui2.Label;
 import com.googlecode.lanterna.gui2.LinearLayout;
 import com.googlecode.lanterna.gui2.MultiWindowTextGUI;
@@ -78,7 +84,7 @@ public class LanternaStartMenuApp {
             panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
             panel.addComponent(DialogComposer.centered(new Button("New Game", () -> {
-                showMessage(screen, gui, config.fullScreen, config.asciiMode, "NOTICE", "New Game is not connected yet.");
+                startNewGameFlow(screen, gui, config.fullScreen, config.asciiMode);
             })));
             panel.addComponent(DialogComposer.centered(new Button("View Controls", () -> {
                 showMessage(screen, gui, config.fullScreen, config.asciiMode, "CONTROLS",
@@ -225,6 +231,340 @@ public class LanternaStartMenuApp {
         }
     }
 
+    private static void startNewGameFlow(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode) {
+        GameSetup setup = new GameSetup("Warrior", "Potion", "Easy");
+
+        int currentScreen = 0; // 0: player, 1: item, 2: enemy, 3: difficulty
+        while (currentScreen >= 0 && currentScreen < 4) {
+            int result = currentScreen == 0 ? openPlayerSelection(screen, gui, fullScreen, asciiMode, setup)
+                       : currentScreen == 1 ? openItemSelection(screen, gui, fullScreen, asciiMode, setup)
+                       : currentScreen == 2 ? openEnemyInformation(screen, gui, fullScreen, asciiMode)
+                       : openDifficultySelection(screen, gui, fullScreen, asciiMode, setup);
+            
+            if (result == -1) {
+                currentScreen--;
+            } else if (result == 1) {
+                currentScreen++;
+            } else {
+                return;
+            }
+        }
+
+        showMessage(screen, gui, fullScreen, asciiMode, "READY", buildSetupSummary(setup));
+    }
+
+    private static int openPlayerSelection(
+        Screen screen,
+        MultiWindowTextGUI gui,
+        boolean fullScreen,
+        boolean asciiMode,
+        GameSetup setup
+    ) {
+        BasicWindow window = new BasicWindow();
+        window.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
+        TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
+        window.setFixedSize(dialogSize);
+
+        int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
+
+        final int[] result = {0};
+        Panel panel = new Panel(new LinearLayout());
+        
+        int mainContentRows = 24;
+        DialogComposer.addVerticalPaddingTop(panel, dialogSize.getRows(), mainContentRows);
+        
+        String headerLine = fittedLine(DialogComposer.formatDialogHeader("PLAYER SETUP", asciiMode), contentWidth);
+        panel.addComponent(DialogComposer.centered(new Label(headerLine)));
+        int borderWidth = Math.max(1, headerLine.length() - 2);
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("Select your player class", borderWidth, asciiMode))));
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(borderWidth, asciiMode))));
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+
+        Panel horizontalPanel = new Panel(new GridLayout(2));
+        horizontalPanel.addComponent(buildPlayerChoiceCardWithAutoClose("Warrior", setup, dialogSize, result, window));
+        horizontalPanel.addComponent(buildPlayerChoiceCardWithAutoClose("Wizard", setup, dialogSize, result, window));
+        panel.addComponent(DialogComposer.centered(horizontalPanel));
+
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        panel.addComponent(DialogComposer.centered(new Button("Back", () -> {
+            result[0] = 0;
+            window.close();
+        })));
+        
+        DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), mainContentRows);
+
+        window.setComponent(panel);
+        gui.addWindowAndWait(window);
+        return result[0];
+    }
+
+    private static Panel buildPlayerChoiceCardWithAutoClose(String className, GameSetup setup, TerminalSize dialogSize, int[] result, BasicWindow window) {
+        int cardWidth = Math.max(16, (dialogSize.getColumns() - 10) / 2);
+        Panel card = new Panel(new LinearLayout());
+
+        card.addComponent(DialogComposer.centered(new Label(fittedLine(className, cardWidth))));
+        addSpriteLines(card, "player", className.toLowerCase(), cardWidth, 10);
+
+        Combatant combatant = "Warrior".equals(className)
+            ? new Warrior("Warrior")
+            : new Wizard("Wizard");
+        card.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(Math.max(1, cardWidth - 2), false))));
+        String[] statLines = fittedLines(combatantStatBlock(combatant), 4, cardWidth);
+        for (String statLine : statLines) {
+            card.addComponent(DialogComposer.centered(new Label(fittedLine(statLine, cardWidth))));
+        }
+        card.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(Math.max(1, cardWidth - 2), false))));
+        card.addComponent(DialogComposer.centered(new Button("Pick " + className, () -> {
+            setup.playerClass = className;
+            result[0] = 1;
+            window.close();
+        })));
+        return card;
+    }
+
+    private static int openItemSelection(
+        Screen screen,
+        MultiWindowTextGUI gui,
+        boolean fullScreen,
+        boolean asciiMode,
+        GameSetup setup
+    ) {
+        BasicWindow window = new BasicWindow();
+        window.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
+        TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
+        window.setFixedSize(dialogSize);
+
+        int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
+        final int[] result = {0};
+
+        Panel panel = new Panel(new LinearLayout());
+        
+        int mainContentRows = 20;
+        DialogComposer.addVerticalPaddingTop(panel, dialogSize.getRows(), mainContentRows);
+        
+        String headerLine = fittedLine(DialogComposer.formatDialogHeader("ITEM SELECTION", asciiMode), contentWidth);
+        panel.addComponent(DialogComposer.centered(new Label(headerLine)));
+        int borderWidth = Math.max(1, headerLine.length() - 2);
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("Select your item", borderWidth, asciiMode))));
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(borderWidth, asciiMode))));
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+
+        Panel horizontalPanel = new Panel(new GridLayout(5));
+        horizontalPanel.addComponent(buildItemChoiceCardWithAutoClose("Potion", "potion", setup, dialogSize, result, window));
+        horizontalPanel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        horizontalPanel.addComponent(buildItemChoiceCardWithAutoClose("Power Stone", "power_stone", setup, dialogSize, result, window));
+        horizontalPanel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        horizontalPanel.addComponent(buildItemChoiceCardWithAutoClose("Smoke Bomb", "smoke_bomb", setup, dialogSize, result, window));
+        panel.addComponent(DialogComposer.centered(horizontalPanel));
+
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        panel.addComponent(DialogComposer.centered(new Button("Back", () -> {
+            result[0] = -1;
+            window.close();
+        })));
+        
+        DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), mainContentRows);
+
+        window.setComponent(panel);
+        gui.addWindowAndWait(window);
+        return result[0];
+    }
+
+    private static Panel buildItemChoiceCardWithAutoClose(String itemName, String spriteName, GameSetup setup, TerminalSize dialogSize, int[] result, BasicWindow window) {
+        int cardWidth = Math.max(12, (dialogSize.getColumns() - 10) / 3);
+        Panel card = new Panel(new LinearLayout());
+
+        card.addComponent(DialogComposer.centered(new Label(fittedLine(itemName, cardWidth))));
+        addSpriteLines(card, "item", spriteName, cardWidth, 6);
+        card.addComponent(DialogComposer.centered(new Button("Pick", () -> {
+            setup.item = itemName;
+            result[0] = 1;
+            window.close();
+        })));
+        return card;
+    }
+
+    private static Panel buildEnemyCardForInformation(String enemyName, String spriteName, TerminalSize dialogSize) {
+        int cardWidth = Math.max(16, (dialogSize.getColumns() - 10) / 2);
+        Panel card = new Panel(new LinearLayout());
+
+        card.addComponent(DialogComposer.centered(new Label(fittedLine(enemyName, cardWidth))));
+        addSpriteLines(card, "enemy", spriteName, cardWidth, 5);
+
+        Combatant enemy = "Goblin".equals(enemyName)
+            ? new Goblin(enemyName)
+            : new Wolf(enemyName);
+        card.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(Math.max(1, cardWidth - 2), false))));
+        String[] statLines = fittedLines(combatantStatBlock(enemy), 4, cardWidth);
+        for (String statLine : statLines) {
+            card.addComponent(DialogComposer.centered(new Label(fittedLine(statLine, cardWidth))));
+        }
+        card.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(Math.max(1, cardWidth - 2), false))));
+        return card;
+    }
+
+    private static int openEnemyInformation(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode) {
+        BasicWindow window = new BasicWindow();
+        window.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
+        TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
+        window.setFixedSize(dialogSize);
+
+        int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
+        final int[] result = {0};
+
+        Panel panel = new Panel(new LinearLayout());
+        
+        int mainContentRows = 24;
+        DialogComposer.addVerticalPaddingTop(panel, dialogSize.getRows(), mainContentRows);
+        
+        String headerLine = fittedLine(DialogComposer.formatDialogHeader("ENEMY INFORMATION", asciiMode), contentWidth);
+        panel.addComponent(DialogComposer.centered(new Label(headerLine)));
+        int borderWidth = Math.max(1, headerLine.length() - 2);
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("View your opponents", borderWidth, asciiMode))));
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(borderWidth, asciiMode))));
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+
+        Panel horizontalPanel = new Panel(new GridLayout(2));
+        horizontalPanel.addComponent(buildEnemyCardForInformation("Goblin", "goblin", dialogSize));
+        horizontalPanel.addComponent(buildEnemyCardForInformation("Wolf", "wolf", dialogSize));
+        panel.addComponent(DialogComposer.centered(horizontalPanel));
+
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        panel.addComponent(DialogComposer.centered(new Button("Continue to Difficulty", () -> {
+            result[0] = 1;
+            window.close();
+        })));
+        panel.addComponent(DialogComposer.centered(new Button("Back", () -> {
+            result[0] = -1;
+            window.close();
+        })));
+        
+        DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), mainContentRows);
+
+        window.setComponent(panel);
+        gui.addWindowAndWait(window);
+        return result[0];
+    }
+
+    private static int openDifficultySelection(
+        Screen screen,
+        MultiWindowTextGUI gui,
+        boolean fullScreen,
+        boolean asciiMode,
+        GameSetup setup
+    ) {
+        BasicWindow window = new BasicWindow();
+        window.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
+        TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
+        window.setFixedSize(dialogSize);
+
+        int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
+        String[] infoLines = fittedLines(
+            "Choose level:\n"
+                + "Easy   - 2 enemies\n"
+                + "Medium - 3 enemies\n"
+                + "Hard   - 4 enemies",
+            Math.max(3, dialogSize.getRows() - 14),
+            contentWidth
+        );
+
+        final int[] result = {0};
+        Panel panel = new Panel(new LinearLayout());
+        
+        int mainContentRows = 20;
+        DialogComposer.addVerticalPaddingTop(panel, dialogSize.getRows(), mainContentRows);
+        
+        String headerLine = fittedLine(DialogComposer.formatDialogHeader("DIFFICULTY", asciiMode), contentWidth);
+        panel.addComponent(DialogComposer.centered(new Label(headerLine)));
+        int borderWidth = Math.max(1, headerLine.length() - 2);
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("Select difficulty", borderWidth, asciiMode))));
+        panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(borderWidth, asciiMode))));
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        for (String line : infoLines) {
+            panel.addComponent(DialogComposer.centered(new Label(line)));
+        }
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        panel.addComponent(DialogComposer.centered(new Button("Easy", () -> {
+            setup.difficulty = "Easy";
+            result[0] = 1;
+            window.close();
+        })));
+        panel.addComponent(DialogComposer.centered(new Button("Medium", () -> {
+            setup.difficulty = "Medium";
+            result[0] = 1;
+            window.close();
+        })));
+        panel.addComponent(DialogComposer.centered(new Button("Hard", () -> {
+            setup.difficulty = "Hard";
+            result[0] = 1;
+            window.close();
+        })));
+        panel.addComponent(DialogComposer.centered(new Button("Back", () -> {
+            result[0] = -1;
+            window.close();
+        })));
+        
+        DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), mainContentRows);
+
+        window.setComponent(panel);
+        gui.addWindowAndWait(window);
+        return result[0];
+    }
+
+    private static String[] fittedLines(String text, int maxRows, int maxColumns) {
+        String[] rawLines = text.split("\\n", -1);
+        int rows = Math.min(rawLines.length, Math.max(1, maxRows));
+        String[] output = new String[rows];
+        for (int i = 0; i < rows; i++) {
+            output[i] = fittedLine(rawLines[i], maxColumns);
+        }
+        if (rawLines.length > rows) {
+            output[rows - 1] = fittedLine("...", maxColumns);
+        }
+        return output;
+    }
+
+    private static String buildSetupSummary(GameSetup setup) {
+        return "Player: " + setup.playerClass + "\n"
+            + "Item: " + setup.item + "\n"
+            + "Difficulty: " + setup.difficulty + "\n"
+            + "\n"
+            + "Next: connect setup to battle engine flow.";
+    }
+
+    private static String padRight(String value, int width) {
+        if (value.length() >= width) {
+            return value;
+        }
+        return value + " ".repeat(width - value.length());
+    }
+
+    private static void addSpriteLines(Panel panel, String category, String name, int maxColumns, int maxRows) {
+        try {
+            AsciiSprite sprite = SpriteCatalog.load(category, name, "normal");
+            if (sprite.getWidth() > maxColumns || sprite.getHeight() > maxRows) {
+                panel.addComponent(DialogComposer.centered(new Label("[" + name + "]")));
+                return;
+            }
+            int rows = Math.min(maxRows, sprite.getHeight());
+            for (int index = 0; index < rows; index++) {
+                panel.addComponent(DialogComposer.centered(new Label(fittedLine(sprite.getLines().get(index), maxColumns))));
+            }
+            for (int index = rows; index < maxRows; index++) {
+                panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+            }
+        } catch (IOException exception) {
+            panel.addComponent(DialogComposer.centered(new Label("[" + name + "]")));
+        }
+    }
+
+    private static String combatantStatBlock(Combatant combatant) {
+        return "HP: " + combatant.getMaxHp() + "\n"
+            + "ATK: " + combatant.getAttack() + "\n"
+            + "DEF: " + combatant.getBaseDefense() + "\n"
+            + "SPD: " + combatant.getSpeed();
+    }
+
     private static String buildSpriteDemoText(
         AsciiSprite arena,
         AsciiSprite warrior,
@@ -367,6 +707,18 @@ public class LanternaStartMenuApp {
             this.fallbackText = fallbackText;
             this.checkWidth = checkWidth;
             this.useFallback = false;
+        }
+    }
+
+    private static final class GameSetup {
+        private String playerClass;
+        private String item;
+        private String difficulty;
+
+        private GameSetup(String playerClass, String item, String difficulty) {
+            this.playerClass = playerClass;
+            this.item = item;
+            this.difficulty = difficulty;
         }
     }
 }
