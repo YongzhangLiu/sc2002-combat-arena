@@ -51,7 +51,7 @@
                         <version>3.11.0</version>
                         <configuration>
                             <includes>
-                                <include>arena/ui/LanternaStartMenuApp.java</include>
+                                <include>arena/ui/**/*.java</include>
                             </includes>
                         </configuration>
                     </plugin>
