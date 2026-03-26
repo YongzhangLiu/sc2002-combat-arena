@@ -14,32 +14,12 @@ public final class SpriteCatalog {
     private SpriteCatalog() {
     }
 
-    public static AsciiSprite loadBest(String category, String name, int maxWidth, int maxHeight) throws IOException {
-        AsciiSprite normal = load(category, name, "normal");
-        if (normal.fits(maxWidth, maxHeight)) {
-            return normal;
-        }
-
-        AsciiSprite compact = load(category, name, "compact");
-        if (compact.fits(maxWidth, maxHeight)) {
-            return compact;
-        }
-
-        return compact;
-    }
-
-    public static AsciiSprite loadBestArenaStrip(String name, int maxWidth, int maxHeight) throws IOException {
+    public static AsciiSprite loadArenaStrip(String name, int maxWidth) throws IOException {
         AsciiSprite normal = composeTiledArena(name, "normal", maxWidth);
-        if (normal != null && normal.fits(maxWidth, maxHeight)) {
+        if (normal != null) {
             return normal;
         }
-
-        AsciiSprite compact = composeTiledArena(name, "compact", maxWidth);
-        if (compact != null && compact.fits(maxWidth, maxHeight)) {
-            return compact;
-        }
-
-        return loadBest("arena", name, maxWidth, maxHeight);
+        return load("arena", name, "normal");
     }
 
     public static AsciiSprite load(String category, String name, String variant) throws IOException {
