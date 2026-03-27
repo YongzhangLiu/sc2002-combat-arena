@@ -4,6 +4,8 @@ import arena.ui.screen.PlayerSelectionScreen;
 import arena.ui.screen.ItemSelectionScreen;
 import arena.ui.screen.EnemyInformationScreen;
 import arena.ui.screen.DifficultySelectionScreen;
+import arena.ui.screen.ArenaBattleScreen;
+import arena.ui.screen.ArenaPreviewStateFactory;
 import com.googlecode.lanterna.bundle.LanternaThemes;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
@@ -240,7 +242,10 @@ public class LanternaStartMenuApp {
             onSetupReady.accept(setup);
             return;
         }
-        showMessage(screen, gui, fullScreen, asciiMode, "READY", buildSetupSummary(setup));
+
+        ArenaBattleScreen arenaScreen = new ArenaBattleScreen();
+        arenaScreen.initialize(screen, gui, fullScreen, asciiMode);
+        arenaScreen.showAndWait(ArenaPreviewStateFactory.fromSetup(setup));
     }
 
     private static String buildSetupSummary(GameSetup setup) {
