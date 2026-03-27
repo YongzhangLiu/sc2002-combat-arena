@@ -1,5 +1,6 @@
 package arena.ui.screen;
 
+import arena.ui.AsciiSprite;
 import arena.ui.SpriteCatalog;
 import arena.ui.DialogComposer;
 import arena.ui.model.ArenaUiCommand;
@@ -359,11 +360,25 @@ public class ArenaBattleScreen {
 
     private List<String> loadEnemySpriteLines(EnemyViewState enemy, int maxWidth, int maxRows) {
         try {
-            List<String> lines = SpriteCatalog.load("enemy", enemy.getSpriteKey(), "normal").getLines();
-            return EnemySpriteClipper.clipRight(lines, maxWidth, maxRows);
+            AsciiSprite sprite = SpriteCatalog.load("enemy", enemy.getSpriteKey(), "normal");
+            if (sprite.getWidth() > maxWidth) {
+                return List.of(fallbackEnemyLabel(enemy));
+            }
+            List<String> lines = sprite.getLines();
+            int rows = Math.min(maxRows, lines.size());
+            return lines.subList(0, rows);
         } catch (IOException exception) {
-            return List.of("[" + enemy.getType() + "]");
+            return List.of(fallbackEnemyLabel(enemy));
         }
+    }
+
+    private String fallbackEnemyLabel(EnemyViewState enemy) {
+        String type = enemy.getType();
+        if (type == null || type.isBlank()) {
+            return "[Enemy]";
+        }
+        String normalized = Character.toUpperCase(type.charAt(0)) + type.substring(1).toLowerCase();
+        return "[" + normalized + "]";
     }
 
     private String effectLine(EnemyViewState enemy) {
@@ -415,12 +430,9 @@ public class ArenaBattleScreen {
             label = fittedLine(label, innerWidth);
         }
 
-        int totalPadding = Math.max(0, innerWidth - label.length());
-        int leftPadding = totalPadding / 2;
-        int rightPadding = totalPadding - leftPadding;
+        int rightPadding = Math.max(0, innerWidth - label.length());
 
         return topLeft
-            + horizontal.repeat(leftPadding)
             + label
             + horizontal.repeat(rightPadding)
             + topRight;
