@@ -21,6 +21,7 @@ import com.googlecode.lanterna.screen.Screen;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
@@ -166,59 +167,55 @@ public class ArenaBattleScreen {
     }
 
     private Component buildInventoryPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
-        int contentWidth = Math.max(8, rect.width() - 4);
-        int columnWidth = Math.max(4, (contentWidth - 1) / 2);
-        Panel content = roundedSection("Inventory", rect.width(), true);
+        int innerWidth = Math.max(8, rect.width() - 2);
+        int spacer = 3;
+        int leftWidth = Math.max(4, (innerWidth - spacer) / 2);
+        int rightWidth = Math.max(4, innerWidth - spacer - leftWidth);
 
-        Panel body = new Panel(new GridLayout(2));
-        Panel itemColumn = new Panel(new LinearLayout(Direction.VERTICAL));
-        itemColumn.addComponent(new Label(fittedLine("Item", columnWidth)));
-        for (String line : loadInventorySprite(state, columnWidth, 5)) {
-            itemColumn.addComponent(new Label(fittedLine(line, columnWidth)));
+        List<String> itemLines = new ArrayList<>();
+        itemLines.add("Item");
+        itemLines.addAll(loadInventorySprite(state, leftWidth, 5));
+
+        List<String> skillLines = new ArrayList<>();
+        skillLines.add("Special");
+        skillLines.addAll(loadSkillSprite(state, rightWidth, 5));
+
+        int bodyRows = Math.max(1, rect.height() - 2);
+        List<String> body = new ArrayList<>();
+        for (int row = 0; row < bodyRows; row++) {
+            String left = row < itemLines.size() ? fittedLine(itemLines.get(row), leftWidth) : "";
+            String right = row < skillLines.size() ? fittedLine(skillLines.get(row), rightWidth) : "";
+            body.add(padRight(left, leftWidth) + " ".repeat(spacer) + padRight(right, rightWidth));
         }
 
-        Panel skillColumn = new Panel(new LinearLayout(Direction.VERTICAL));
-        skillColumn.addComponent(new Label(fittedLine("Special", columnWidth)));
-        for (String line : loadSkillSprite(state, columnWidth, 5)) {
-            skillColumn.addComponent(new Label(fittedLine(line, columnWidth)));
-        }
-
-        body.addComponent(itemColumn);
-        body.addComponent(skillColumn);
-        content.addComponent(body);
-        content.addComponent(new Label(DialogComposer.formatBottomBorder(Math.max(1, rect.width() - 2), asciiMode)));
-        content.setPreferredSize(new TerminalSize(rect.width(), rect.height()));
-        return content;
+        return buildUtilitySection("Inventory", rect, body);
     }
 
     private Component buildStatusPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
-        int contentWidth = Math.max(8, rect.width() - 4);
+        int contentWidth = Math.max(8, rect.width() - 2);
         String playerHp = state.getPlayerState() == null
             ? "-"
             : state.getPlayerState().getCurrentHp() + "/" + state.getPlayerState().getMaxHp();
 
-        Panel content = roundedSection("Status", rect.width(), true);
-        content.addComponent(new Label(fittedLine("Player HP: " + playerHp, contentWidth)));
-        content.addComponent(new Label(fittedLine("Enemies: " + state.getAliveEnemies().size(), contentWidth)));
-        content.addComponent(new Label(fittedLine("Target: " + (state.getCurrentTargetIndex() + 1), contentWidth)));
-        content.addComponent(new Label(DialogComposer.formatBottomBorder(Math.max(1, rect.width() - 2), asciiMode)));
-        content.setPreferredSize(new TerminalSize(rect.width(), rect.height()));
-        return content;
+        List<String> body = List.of(
+            fittedLine("Player HP: " + playerHp, contentWidth),
+            fittedLine("Enemies: " + state.getAliveEnemies().size(), contentWidth),
+            fittedLine("Target: " + (state.getCurrentTargetIndex() + 1), contentWidth)
+        );
+        return buildUtilitySection("Status", rect, body);
     }
 
     private Component buildInfoPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
-        int contentWidth = Math.max(8, rect.width() - 4);
-        Panel content = roundedSection("Info", rect.width(), true);
-        content.addComponent(new Label(fittedLine("Round: " + state.getRoundNumber(), contentWidth)));
-        content.addComponent(new Label(fittedLine("Turn: " + state.getTurnOwnerName(), contentWidth)));
-        int maxLogs = Math.max(1, rect.height() - 6);
+        int contentWidth = Math.max(8, rect.width() - 2);
+        int maxLogs = Math.max(1, rect.height() - 4);
+        List<String> body = new ArrayList<>();
+        body.add(fittedLine("Round: " + state.getRoundNumber(), contentWidth));
+        body.add(fittedLine("Turn: " + state.getTurnOwnerName(), contentWidth));
         for (int i = 0; i < state.getCombatLog().size() && i < maxLogs; i++) {
-            content.addComponent(new Label(fittedLine(state.getCombatLog().get(i), contentWidth)));
+            body.add(fittedLine(state.getCombatLog().get(i), contentWidth));
         }
-        content.addComponent(new Label(fittedLine(state.getFeedbackMessage(), contentWidth)));
-        content.addComponent(new Label(DialogComposer.formatBottomBorder(Math.max(1, rect.width() - 2), asciiMode)));
-        content.setPreferredSize(new TerminalSize(rect.width(), rect.height()));
-        return content;
+        body.add(fittedLine(state.getFeedbackMessage(), contentWidth));
+        return buildUtilitySection("Info", rect, body);
     }
 
     private Component buildArenaPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
@@ -261,16 +258,12 @@ public class ArenaBattleScreen {
             return block;
         }
 
-        int spriteRows = Math.max(1, height - 2);
+        int spriteRows = Math.max(1, height);
         List<String> spriteLines = loadSprite("player", state.getPlayerState().getSpriteKey(), Math.max(6, width), spriteRows);
-        int fixedLines = 2;
-        int topPadding = Math.max(0, height - fixedLines - spriteLines.size());
+        int topPadding = Math.max(0, height - spriteLines.size());
         for (int i = 0; i < topPadding; i++) {
             block.addComponent(new Label(""));
         }
-
-        block.addComponent(new Label(fittedLine(state.getPlayerState().getName(), width)));
-        block.addComponent(new Label("HP " + state.getPlayerState().getCurrentHp() + "/" + state.getPlayerState().getMaxHp()));
 
         for (String line : spriteLines) {
             block.addComponent(new Label(fittedLine(line, width)));
@@ -288,14 +281,14 @@ public class ArenaBattleScreen {
         }
 
         int enemyCount = Math.max(1, state.getAliveEnemies().size());
-        int slotWidth = Math.max(8, Math.min(16, width / enemyCount));
+        int slotWidth = Math.max(8, Math.min(19, (width / enemyCount) + 3));
         if (slotWidth * enemyCount > width) {
             slotWidth = Math.max(6, width / enemyCount);
         }
 
         int spacing = 0;
         if (enemyCount > 1) {
-            spacing = Math.min(4, Math.max(0, (width - (slotWidth * enemyCount)) / (enemyCount - 1)));
+            spacing = Math.min(2, Math.max(0, (width - (slotWidth * enemyCount)) / (enemyCount - 1)));
         }
         int usedWidth = (slotWidth * enemyCount) + (spacing * Math.max(0, enemyCount - 1));
         int leftPadding = Math.max(0, width - usedWidth);
@@ -322,7 +315,8 @@ public class ArenaBattleScreen {
         Panel content = new Panel(new LinearLayout(Direction.VERTICAL));
 
         String targetLabel = index == selectedIndex ? "SELECTED" : "SELECT";
-        int fixedLines = 3;
+        boolean hasEffects = !enemy.getActiveEffects().isEmpty();
+        int fixedLines = hasEffects ? 3 : 2;
         List<String> spriteLines = loadEnemySpriteLines(enemy, contentWidth, spriteRows);
         int topPadding = Math.max(0, slotHeight - fixedLines - spriteLines.size());
         for (int i = 0; i < topPadding; i++) {
@@ -330,7 +324,9 @@ public class ArenaBattleScreen {
         }
 
         content.addComponent(new Button(targetLabel, () -> enqueueCommand(new ArenaUiCommand.SelectTarget(index))));
-        content.addComponent(new Label(fittedLine(effectLine(enemy), contentWidth)));
+        if (hasEffects) {
+            content.addComponent(new Label(fittedLine(effectLine(enemy), contentWidth)));
+        }
         content.addComponent(new Label(fittedLine(hpLine(enemy, contentWidth), contentWidth)));
         for (String spriteLine : spriteLines) {
             content.addComponent(new Label(fittedLine(spriteLine, contentWidth)));
@@ -369,15 +365,20 @@ public class ArenaBattleScreen {
         return bar + " " + enemy.getCurrentHp() + "/" + enemy.getMaxHp();
     }
 
-    private Panel roundedSection(String title, int width, boolean includeHeader) {
-        int borderWidth = Math.max(1, width - 2);
+    private Component buildUtilitySection(String title, ArenaLayoutCalculator.Rect rect, List<String> contentLines) {
+        int innerWidth = Math.max(1, rect.width() - 2);
+        int bodyRows = Math.max(1, rect.height() - 2);
+
         Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
-        panel.addComponent(new Label(includeHeader
-            ? formatEmbeddedTopBorder(title, borderWidth)
-            : DialogComposer.formatTopBorder(borderWidth, asciiMode)));
-        if (includeHeader) {
-            panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        panel.addComponent(new Label(formatEmbeddedTopBorder(title, innerWidth)));
+
+        for (int i = 0; i < bodyRows; i++) {
+            String line = i < contentLines.size() ? contentLines.get(i) : "";
+            panel.addComponent(new Label(formatBodyBorderLine(line, innerWidth)));
         }
+
+        panel.addComponent(new Label(DialogComposer.formatBottomBorder(innerWidth, asciiMode)));
+        panel.setPreferredSize(new TerminalSize(rect.width(), rect.height()));
         return panel;
     }
 
@@ -402,6 +403,20 @@ public class ArenaBattleScreen {
             + label
             + horizontal.repeat(rightPadding)
             + topRight;
+    }
+
+    private String formatBodyBorderLine(String text, int innerWidth) {
+        String vertical = asciiMode ? "|" : "│";
+        String content = fittedLine(text == null ? "" : text, innerWidth);
+        return vertical + padRight(content, innerWidth) + vertical;
+    }
+
+    private String padRight(String value, int width) {
+        String safe = value == null ? "" : value;
+        if (safe.length() >= width) {
+            return safe.substring(0, width);
+        }
+        return safe + " ".repeat(width - safe.length());
     }
 
     private List<String> loadInventorySprite(ArenaViewState state, int maxWidth, int maxRows) {
