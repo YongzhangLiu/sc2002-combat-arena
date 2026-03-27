@@ -2,6 +2,7 @@ package arena.engine;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import arena.model.combatant.Enemy;
 import arena.model.combatant.Goblin;
@@ -13,12 +14,12 @@ import arena.model.item.Potion;
 import arena.model.item.PowerStone;
 import arena.model.item.SmokeBomb;
 
-public class GameInit {
-    private ArrayList<Enemy> firstEnemies,backup;
+public class GameInit{
     private Player player1;
-    ;
+    private List<List<Enemy>> enemies;
 
     public Player initPlayers(int choice, String name){        //choice -> 1:warrior, 2:Wizard
+        
         if (choice == 1){
             player1 = new Warrior(name);
         }else{
@@ -27,7 +28,7 @@ public class GameInit {
         return player1;
     }
 
-    public void chooseItems(int choice){        //choice -> 1:Potion,2:PowerStone,3:SmokeBomb
+    public void chooseItems(Player player1, int choice){        //choice -> 1:Potion,2:PowerStone,3:SmokeBomb
         switch (choice) {
             case 1:
                 player1.addItem(new Potion());
@@ -44,9 +45,11 @@ public class GameInit {
         }
     }
 
-    public ArrayList<ArrayList<Enemy>> initEnemies(int difficulty){ //receive difficulty(1-3) from input
-        ArrayList<ArrayList<Enemy>> enemies = new ArrayList<>(Arrays.asList(firstEnemies, backup));
-
+    public List<List<Enemy>> initEnemies(int difficulty){ //receive difficulty(1-3) from input
+        List<Enemy> firstEnemies = new ArrayList<>();
+        List<Enemy> backup = new ArrayList<>();
+        enemies = new ArrayList<>(Arrays.asList(firstEnemies, backup));
+        
         switch (difficulty) {
             case 1:     //easy;
                 for (int i = 0; i < 3; i++){
@@ -76,4 +79,12 @@ public class GameInit {
                 return enemies;
         }
     }
+
+    public void startGame(){
+        GameState.setPlayer(player1);
+        GameState.setEnemies(enemies);
+        GameState.setCurrentRound(1);
+        GameState.newTurnOrder();
+    }
+
 }

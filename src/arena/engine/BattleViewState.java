@@ -22,18 +22,15 @@ public class BattleViewState {
     private final String selectedDifficulty;
     private final int enemiesRemaining;
     private final int roundsSurvived;
-    private final boolean replayAvailable;
-    private final EventLog eventLog;
-    private final GamePhase phase; // SELECTION, IN_BATTLE, VICTORY, DEFEAT
+    private final boolean replayAvailable;// SELECTION, IN_BATTLE, VICTORY, DEFEAT
 
     public BattleViewState(int currentRound, CombatantView playerView,
                            List<CombatantView> enemyViews, boolean isPlayerTurn,
-                           List<String> availableActions, EventLog eventLog,
-                           GamePhase phase) {
+                           List<String> availableActions) {
         this(currentRound, playerView, enemyViews, isPlayerTurn, null,
             Collections.emptyList(), availableActions, Collections.emptyList(),
             Collections.emptyList(), null, enemyViews == null ? 0 : (int) enemyViews.stream().filter(CombatantView::isAlive).count(),
-            currentRound, false, eventLog, phase);
+            currentRound, false);
     }
 
     public BattleViewState(int currentRound, CombatantView playerView,
@@ -42,8 +39,7 @@ public class BattleViewState {
                            List<String> availableActions, List<String> availableTargets,
                            List<String> selectedItems, String selectedDifficulty,
                            int enemiesRemaining, int roundsSurvived,
-                           boolean replayAvailable, EventLog eventLog,
-                           GamePhase phase) {
+                           boolean replayAvailable) {
         this.currentRound = currentRound;
         this.playerView = playerView;
         this.enemyViews = enemyViews;
@@ -57,8 +53,6 @@ public class BattleViewState {
         this.enemiesRemaining = enemiesRemaining;
         this.roundsSurvived = roundsSurvived;
         this.replayAvailable = replayAvailable;
-        this.eventLog = eventLog;
-        this.phase = phase;
     }
 
     public int getCurrentRound() {
@@ -113,11 +107,4 @@ public class BattleViewState {
         return replayAvailable;
     }
 
-    public EventLog getEventLog() {
-        return eventLog;
-    }
-
-    public GamePhase getPhase() {
-        return phase;
-    }
 }

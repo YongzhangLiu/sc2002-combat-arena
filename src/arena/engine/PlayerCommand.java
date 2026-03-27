@@ -17,6 +17,7 @@ public class PlayerCommand {
     private final List<String> selectedItems;
 
     public PlayerCommand(Action action, Object target) {
+
         this(action, target, null, null, Collections.emptyList());
     }
 
