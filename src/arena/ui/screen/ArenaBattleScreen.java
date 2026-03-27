@@ -39,6 +39,7 @@ import static arena.ui.UiScreenSupport.fittedLine;
  *  5) close()
  */
 public class ArenaBattleScreen {
+    private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
     private final ArenaLayoutCalculator layoutCalculator;
     private final Queue<ArenaUiCommand> commandQueue;
 
@@ -50,6 +51,7 @@ public class ArenaBattleScreen {
     private ArenaViewState lastRenderedState;
     private ArenaLayoutCalculator.LayoutBounds lastLayoutBounds;
     private boolean overlayActive;
+    private TerminalSize windowedLayoutSize;
 
     public ArenaBattleScreen() {
         this.layoutCalculator = new ArenaLayoutCalculator();
@@ -62,11 +64,16 @@ public class ArenaBattleScreen {
         this.fullScreen = fullScreen;
         this.asciiMode = asciiMode;
         this.overlayActive = false;
+        this.windowedLayoutSize = null;
 
         this.window = new BasicWindow("Arena Battle");
         window.setHints(fullScreen
             ? java.util.Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.FULL_SCREEN, Window.Hint.EXPANDED)
             : java.util.Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
+        if (!fullScreen) {
+            this.windowedLayoutSize = fitToTerminal(screen.getTerminalSize(), WINDOWED_SIZE);
+            window.setFixedSize(this.windowedLayoutSize);
+        }
     }
 
     public void render(ArenaViewState state) {
@@ -75,7 +82,7 @@ public class ArenaBattleScreen {
         }
 
         this.lastRenderedState = state;
-        TerminalSize size = screen.getTerminalSize();
+        TerminalSize size = resolveLayoutSize();
         this.lastLayoutBounds = layoutCalculator.calculate(size);
 
         Panel root = buildSkeletonPanel(lastLayoutBounds, state);
@@ -92,7 +99,7 @@ public class ArenaBattleScreen {
         }
 
         this.lastRenderedState = state;
-        TerminalSize size = screen.getTerminalSize();
+        TerminalSize size = resolveLayoutSize();
         this.lastLayoutBounds = layoutCalculator.calculate(size);
         window.setComponent(buildSkeletonPanel(lastLayoutBounds, state));
         gui.addWindowAndWait(window);
@@ -155,7 +162,7 @@ public class ArenaBattleScreen {
     private Panel buildSkeletonPanel(ArenaLayoutCalculator.LayoutBounds bounds, ArenaViewState state) {
         Panel root = new Panel(new LinearLayout(Direction.VERTICAL));
 
-        Panel topRow = new Panel(new GridLayout(3));
+        Panel topRow = new Panel(new LinearLayout(Direction.HORIZONTAL));
         topRow.addComponent(buildInventoryPanel(bounds.inventoryPanel(), state));
         topRow.addComponent(buildInfoPanel(bounds.infoPanel(), state));
         topRow.addComponent(buildStatusPanel(bounds.statusPanel(), state));
@@ -225,9 +232,18 @@ public class ArenaBattleScreen {
         Panel content = new Panel(new LinearLayout(Direction.VERTICAL));
 
         int actorRows = Math.max(3, arenaRows - 1);
-        Panel actorRow = new Panel(new GridLayout(2));
-        actorRow.addComponent(buildPlayerBlock(Math.max(12, contentWidth / 3), actorRows, state));
-        actorRow.addComponent(buildEnemyStrip(Math.max(8, contentWidth - Math.max(12, contentWidth / 3)), actorRows, state));
+        int playerWidth = Math.max(12, Math.min(24, contentWidth / 3));
+        int gap = Math.max(2, Math.min(6, contentWidth / 18));
+        int enemyWidth = contentWidth - playerWidth - gap;
+        if (enemyWidth < 8) {
+            gap = Math.max(1, gap - (8 - enemyWidth));
+            enemyWidth = Math.max(8, contentWidth - playerWidth - gap);
+        }
+
+        Panel actorRow = new Panel(new LinearLayout(Direction.HORIZONTAL));
+        actorRow.addComponent(buildPlayerBlock(playerWidth, actorRows, state));
+        actorRow.addComponent(new EmptySpace(new TerminalSize(gap, 1)));
+        actorRow.addComponent(buildEnemyStrip(enemyWidth, actorRows, state));
         content.addComponent(actorRow);
 
         for (String tileLine : loadArenaBaseLine(contentWidth, 1)) {
@@ -314,7 +330,12 @@ public class ArenaBattleScreen {
         int contentWidth = Math.max(5, slotWidth - 1);
         Panel content = new Panel(new LinearLayout(Direction.VERTICAL));
 
-        String targetLabel = index == selectedIndex ? "SELECTED" : "SELECT";
+        String targetLabel;
+        if (contentWidth >= 10) {
+            targetLabel = index == selectedIndex ? "SELECTED" : "SELECT";
+        } else {
+            targetLabel = index == selectedIndex ? "SEL*" : "SEL";
+        }
         boolean hasEffects = !enemy.getActiveEffects().isEmpty();
         int fixedLines = hasEffects ? 3 : 2;
         List<String> spriteLines = loadEnemySpriteLines(enemy, contentWidth, spriteRows);
@@ -417,6 +438,24 @@ public class ArenaBattleScreen {
             return safe.substring(0, width);
         }
         return safe + " ".repeat(width - safe.length());
+    }
+
+    private TerminalSize resolveLayoutSize() {
+        if (!fullScreen) {
+            if (windowedLayoutSize != null) {
+                return windowedLayoutSize;
+            }
+            return fitToTerminal(screen.getTerminalSize(), WINDOWED_SIZE);
+        }
+        return screen.getTerminalSize();
+    }
+
+    private TerminalSize fitToTerminal(TerminalSize terminalSize, TerminalSize preferred) {
+        int availableColumns = Math.max(20, terminalSize.getColumns() - 2);
+        int availableRows = Math.max(10, terminalSize.getRows() - 2);
+        int columns = Math.min(preferred.getColumns(), availableColumns);
+        int rows = Math.min(preferred.getRows(), availableRows);
+        return new TerminalSize(columns, rows);
     }
 
     private List<String> loadInventorySprite(ArenaViewState state, int maxWidth, int maxRows) {
