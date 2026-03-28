@@ -230,18 +230,27 @@ public class ArenaBattleScreen {
         Panel content = new Panel(new LinearLayout(Direction.VERTICAL));
 
         int actorRows = Math.max(3, arenaRows - 1);
-        int playerWidth = Math.max(12, Math.min(24, contentWidth / 3));
-        int gap = Math.max(2, Math.min(6, contentWidth / 18));
-        int enemyWidth = contentWidth - playerWidth - gap;
-        if (enemyWidth < 8) {
-            gap = Math.max(1, gap - (8 - enemyWidth));
-            enemyWidth = Math.max(8, contentWidth - playerWidth - gap);
-        }
+        int enemyCount = Math.max(1, state.getAliveEnemies().size());
+        int minEnemyContentWidth = getMaxEnemySpriteWidth(state);
+        int minEnemySlotWidth = Math.max(8, minEnemyContentWidth + 1);
+        int minEnemySpacing = enemyCount > 1 ? 1 : 0;
+        int minEnemyWidth = (minEnemySlotWidth * enemyCount) + (minEnemySpacing * Math.max(0, enemyCount - 1));
+
+        int desiredPlayerWidth = Math.max(12, Math.min(24, contentWidth / 3));
+        int minPlayerWidth = 8;
+        int gap = Math.max(1, Math.min(4, contentWidth / 20));
+
+        int maxGapForMinimum = Math.max(0, contentWidth - minPlayerWidth - minEnemyWidth);
+        gap = Math.min(gap, maxGapForMinimum);
+
+        int maxPlayerWidth = Math.max(minPlayerWidth, contentWidth - gap - minEnemyWidth);
+        int playerWidth = Math.max(minPlayerWidth, Math.min(desiredPlayerWidth, maxPlayerWidth));
+        int enemyWidth = Math.max(8, contentWidth - playerWidth - gap);
 
         Panel actorRow = new Panel(new LinearLayout(Direction.HORIZONTAL));
         actorRow.addComponent(buildPlayerBlock(playerWidth, actorRows, state));
         actorRow.addComponent(new EmptySpace(new TerminalSize(gap, 1)));
-        actorRow.addComponent(buildEnemyStrip(enemyWidth, actorRows, state));
+        actorRow.addComponent(buildEnemyStrip(enemyWidth, actorRows, state, minEnemyContentWidth));
         content.addComponent(actorRow);
 
         for (String tileLine : loadArenaBaseLine(contentWidth, 1)) {
@@ -288,7 +297,7 @@ public class ArenaBattleScreen {
         return block;
     }
 
-    private Component buildEnemyStrip(int width, int height, ArenaViewState state) {
+    private Component buildEnemyStrip(int width, int height, ArenaViewState state, int minEnemyContentWidth) {
         if (state.getAliveEnemies().isEmpty()) {
             Panel empty = new Panel(new LinearLayout(Direction.VERTICAL));
             empty.addComponent(new Label("No enemies alive"));
@@ -297,7 +306,9 @@ public class ArenaBattleScreen {
         }
 
         int enemyCount = Math.max(1, state.getAliveEnemies().size());
-        int slotWidth = Math.max(8, Math.min(19, (width / enemyCount) + 3));
+        int minimumSlotWidth = Math.max(8, minEnemyContentWidth + 1);
+        int slotWidth = Math.max(minimumSlotWidth, width / enemyCount);
+
         if (slotWidth * enemyCount > width) {
             slotWidth = Math.max(6, width / enemyCount);
         }
@@ -305,6 +316,21 @@ public class ArenaBattleScreen {
         int spacing = 0;
         if (enemyCount > 1) {
             spacing = Math.min(2, Math.max(0, (width - (slotWidth * enemyCount)) / (enemyCount - 1)));
+        }
+
+        while (enemyCount > 1
+            && slotWidth > minimumSlotWidth
+            && (slotWidth * enemyCount) + (spacing * (enemyCount - 1)) > width) {
+            slotWidth--;
+        }
+
+        while (enemyCount > 1 && spacing > 0 && (slotWidth * enemyCount) + (spacing * (enemyCount - 1)) > width) {
+            spacing--;
+        }
+
+        if ((slotWidth * enemyCount) + (spacing * Math.max(0, enemyCount - 1)) > width) {
+            slotWidth = Math.max(6, width / enemyCount);
+            spacing = 0;
         }
 
         int usedWidth = (slotWidth * enemyCount) + (spacing * Math.max(0, enemyCount - 1));
@@ -326,6 +352,19 @@ public class ArenaBattleScreen {
 
         enemyRow.setPreferredSize(new TerminalSize(width, height));
         return enemyRow;
+    }
+
+    private int getMaxEnemySpriteWidth(ArenaViewState state) {
+        int maxWidth = 10;
+        for (EnemyViewState enemy : state.getAliveEnemies()) {
+            try {
+                AsciiSprite sprite = SpriteCatalog.load("enemy", enemy.getSpriteKey(), "normal");
+                maxWidth = Math.max(maxWidth, sprite.getWidth());
+            } catch (IOException ignored) {
+                maxWidth = Math.max(maxWidth, fallbackEnemyLabel(enemy).length());
+            }
+        }
+        return maxWidth;
     }
 
     private Component buildEnemySlot(EnemyViewState enemy, int index, int selectedIndex, int slotWidth, int slotHeight, int spriteRows) {
