@@ -220,7 +220,7 @@ public class ArenaBattleScreen {
         source.addAll(state.getCombatLog());
         source.add(state.getFeedbackMessage());
 
-        return buildUtilitySection("Info >>>", rect, source, true);
+        return buildUtilitySection("Info", rect, source, true);
     }
 
     private Component buildArenaPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
@@ -427,25 +427,38 @@ public class ArenaBattleScreen {
     }
 
     private Component buildTopBorderRow(String title, int innerWidth) {
-        String horizontal = asciiMode ? "-" : "─";
         String topLeft = asciiMode ? "+" : "╭";
         String topRight = asciiMode ? "+" : "╮";
+        String horizontal = asciiMode ? "-" : "─";
 
         String normalized = title == null ? "" : title.trim();
-        String label = " " + normalized + " ";
-        if (label.length() > innerWidth) {
-            label = fittedLine(label, innerWidth);
-        }
-        String middle = padRight(label + horizontal.repeat(Math.max(0, innerWidth - label.length())), innerWidth);
+        String titleText = " " + normalized + " ";
 
-        Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL));
+        if (innerWidth <= 1) {
+            titleText = "";
+        } else {
+            int maxTitleWidth = Math.max(0, innerWidth - 1);
+            if (titleText.length() > maxTitleWidth) {
+                titleText = titleText.substring(0, maxTitleWidth);
+            }
+        }
+
+        int fillWidth = Math.max(0, innerWidth - titleText.length());
+
+        LinearLayout rowLayout = new LinearLayout(Direction.HORIZONTAL);
+        rowLayout.setSpacing(0);
+        Panel row = new Panel(rowLayout);
         Label left = new Label(topLeft);
-        Label center = new Label(middle);
-        center.setPreferredSize(new TerminalSize(innerWidth, 1));
+        Label titleLabel = new Label(titleText);
+        titleLabel.setPreferredSize(new TerminalSize(titleText.length(), 1));
+        Label fillLabel = new Label(horizontal.repeat(fillWidth));
+        fillLabel.setPreferredSize(new TerminalSize(fillWidth, 1));
         Label right = new Label(topRight);
         row.addComponent(left);
-        row.addComponent(center);
+        row.addComponent(titleLabel);
+        row.addComponent(fillLabel);
         row.addComponent(right);
+        row.setPreferredSize(new TerminalSize(innerWidth + 2, 1));
         return row;
     }
 
@@ -453,7 +466,9 @@ public class ArenaBattleScreen {
         String vertical = asciiMode ? "|" : "│";
         String content = fittedLine(text == null ? "" : text, innerWidth);
 
-        Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL));
+        LinearLayout rowLayout = new LinearLayout(Direction.HORIZONTAL);
+        rowLayout.setSpacing(0);
+        Panel row = new Panel(rowLayout);
         Label left = new Label(vertical);
         Label center = new Label(padRight(content, innerWidth));
         center.setPreferredSize(new TerminalSize(innerWidth, 1));
@@ -461,6 +476,7 @@ public class ArenaBattleScreen {
         row.addComponent(left);
         row.addComponent(center);
         row.addComponent(right);
+        row.setPreferredSize(new TerminalSize(innerWidth + 2, 1));
         return row;
     }
 
@@ -469,7 +485,9 @@ public class ArenaBattleScreen {
         String bottomLeft = asciiMode ? "+" : "╰";
         String bottomRight = asciiMode ? "+" : "╯";
 
-        Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL));
+        LinearLayout rowLayout = new LinearLayout(Direction.HORIZONTAL);
+        rowLayout.setSpacing(0);
+        Panel row = new Panel(rowLayout);
         Label left = new Label(bottomLeft);
         Label center = new Label(horizontal.repeat(innerWidth));
         center.setPreferredSize(new TerminalSize(innerWidth, 1));
@@ -477,6 +495,7 @@ public class ArenaBattleScreen {
         row.addComponent(left);
         row.addComponent(center);
         row.addComponent(right);
+        row.setPreferredSize(new TerminalSize(innerWidth + 2, 1));
         return row;
     }
 
