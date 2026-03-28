@@ -386,7 +386,7 @@ public class ArenaBattleScreen {
             content.addComponent(new Label(""));
         }
 
-        content.addComponent(new Button(targetLabel, () -> enqueueCommand(new ArenaUiCommand.SelectTarget(index))));
+        content.addComponent(new Button(targetLabel, () -> onTargetSelected(index)));
         if (hasEffects) {
             content.addComponent(new Label(fittedLine(effectLine(enemy), contentWidth)));
         }
@@ -397,6 +397,35 @@ public class ArenaBattleScreen {
 
         content.setPreferredSize(new TerminalSize(Math.max(6, slotWidth), Math.max(6, slotHeight)));
         return content;
+    }
+
+    private void onTargetSelected(int index) {
+        enqueueCommand(new ArenaUiCommand.SelectTarget(index));
+
+        if (lastRenderedState == null || window == null || !window.isVisible()) {
+            return;
+        }
+
+        int boundedIndex = Math.max(0, Math.min(index, Math.max(0, lastRenderedState.getAliveEnemies().size() - 1)));
+        ArenaViewState updated = withCurrentTargetIndex(lastRenderedState, boundedIndex);
+        render(updated);
+    }
+
+    private ArenaViewState withCurrentTargetIndex(ArenaViewState state, int targetIndex) {
+        return new ArenaViewState(
+            state.getRoundNumber(),
+            state.getTurnOwnerName(),
+            state.isPlayerTurn(),
+            state.getPlayerState(),
+            state.getAliveEnemies(),
+            targetIndex,
+            state.getAvailableActions(),
+            state.getAvailableItems(),
+            state.getCombatLog(),
+            state.getFeedbackMessage(),
+            state.isVictory(),
+            state.isDefeat()
+        );
     }
 
     private List<String> loadEnemySpriteLines(EnemyViewState enemy, int maxWidth, int maxRows) {
