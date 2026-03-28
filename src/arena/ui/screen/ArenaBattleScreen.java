@@ -1,8 +1,8 @@
 package arena.ui.screen;
 
 import arena.ui.AsciiSprite;
-import arena.ui.SpriteCatalog;
 import arena.ui.DialogComposer;
+import arena.ui.SpriteCatalog;
 import arena.ui.model.ArenaUiCommand;
 import arena.ui.model.ArenaViewState;
 import arena.ui.model.EnemyViewState;
@@ -29,18 +29,9 @@ import java.util.Queue;
 
 import static arena.ui.UiScreenSupport.fittedLine;
 
-/**
- * Host screen for arena battle UI.
- *
- * Event-driven usage:
- *  1) initialize(...)
- *  2) render(state) when engine state changes
- *  3) pollCommand() to consume pending input intents
- *  4) showOverlay(...) on victory/defeat
- *  5) close()
- */
 public class ArenaBattleScreen {
     private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
+
     private final ArenaLayoutCalculator layoutCalculator;
     private final Queue<ArenaUiCommand> commandQueue;
 
@@ -71,6 +62,7 @@ public class ArenaBattleScreen {
         window.setHints(fullScreen
             ? java.util.Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.FULL_SCREEN, Window.Hint.EXPANDED)
             : java.util.Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
+
         if (!fullScreen) {
             this.windowedLayoutSize = fitToTerminal(screen.getTerminalSize(), WINDOWED_SIZE);
             window.setFixedSize(this.windowedLayoutSize);
@@ -83,12 +75,9 @@ public class ArenaBattleScreen {
         }
 
         this.lastRenderedState = state;
-        TerminalSize size = resolveLayoutSize();
-        this.lastLayoutBounds = layoutCalculator.calculate(size);
+        this.lastLayoutBounds = layoutCalculator.calculate(resolveLayoutSize());
 
-        Panel root = buildSkeletonPanel(lastLayoutBounds, state);
-        window.setComponent(root);
-
+        window.setComponent(buildSkeletonPanel(lastLayoutBounds, state));
         if (!window.isVisible()) {
             gui.addWindow(window);
         }
@@ -100,8 +89,7 @@ public class ArenaBattleScreen {
         }
 
         this.lastRenderedState = state;
-        TerminalSize size = resolveLayoutSize();
-        this.lastLayoutBounds = layoutCalculator.calculate(size);
+        this.lastLayoutBounds = layoutCalculator.calculate(resolveLayoutSize());
         window.setComponent(buildSkeletonPanel(lastLayoutBounds, state));
         gui.addWindowAndWait(window);
     }
@@ -165,8 +153,21 @@ public class ArenaBattleScreen {
 
         Panel topRow = new Panel(new LinearLayout(Direction.HORIZONTAL));
         topRow.addComponent(buildInventoryPanel(bounds.inventoryPanel(), state));
+
+        int gapInventoryToInfo = Math.max(0, bounds.infoPanel().column() - bounds.inventoryPanel().right());
+        if (gapInventoryToInfo > 0) {
+            topRow.addComponent(new EmptySpace(new TerminalSize(gapInventoryToInfo, 1)));
+        }
+
         topRow.addComponent(buildInfoPanel(bounds.infoPanel(), state));
+
+        int gapInfoToStatus = Math.max(0, bounds.statusPanel().column() - bounds.infoPanel().right());
+        if (gapInfoToStatus > 0) {
+            topRow.addComponent(new EmptySpace(new TerminalSize(gapInfoToStatus, 1)));
+        }
+
         topRow.addComponent(buildStatusPanel(bounds.statusPanel(), state));
+        topRow.setPreferredSize(new TerminalSize(bounds.canvas().width(), bounds.inventoryPanel().height()));
 
         root.addComponent(topRow);
         root.addComponent(buildArenaPanel(bounds.arenaPanel(), state));
@@ -196,34 +197,30 @@ public class ArenaBattleScreen {
             body.add(padRight(left, leftWidth) + " ".repeat(spacer) + padRight(right, rightWidth));
         }
 
-        return buildUtilitySection("Inventory", rect, body);
+        return buildUtilitySection("Inventory", rect, body, false);
     }
 
     private Component buildStatusPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
-        int contentWidth = Math.max(8, rect.width() - 2);
         String playerHp = state.getPlayerState() == null
             ? "-"
             : state.getPlayerState().getCurrentHp() + "/" + state.getPlayerState().getMaxHp();
 
         List<String> body = List.of(
-            fittedLine("Player HP: " + playerHp, contentWidth),
-            fittedLine("Enemies: " + state.getAliveEnemies().size(), contentWidth),
-            fittedLine("Target: " + (state.getCurrentTargetIndex() + 1), contentWidth)
+            "Player HP: " + playerHp,
+            "Enemies: " + state.getAliveEnemies().size(),
+            "Target: " + (state.getCurrentTargetIndex() + 1)
         );
-        return buildUtilitySection("Status", rect, body);
+        return buildUtilitySection("Status", rect, body, false);
     }
 
     private Component buildInfoPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
-        int contentWidth = Math.max(8, rect.width() - 2);
-        int maxLogs = Math.max(1, rect.height() - 4);
-        List<String> body = new ArrayList<>();
-        body.add(fittedLine("Round: " + state.getRoundNumber(), contentWidth));
-        body.add(fittedLine("Turn: " + state.getTurnOwnerName(), contentWidth));
-        for (int i = 0; i < state.getCombatLog().size() && i < maxLogs; i++) {
-            body.add(fittedLine(state.getCombatLog().get(i), contentWidth));
-        }
-        body.add(fittedLine(state.getFeedbackMessage(), contentWidth));
-        return buildUtilitySection("Info", rect, body);
+        List<String> source = new ArrayList<>();
+        source.add("Round: " + state.getRoundNumber());
+        source.add("Turn: " + state.getTurnOwnerName());
+        source.addAll(state.getCombatLog());
+        source.add(state.getFeedbackMessage());
+
+        return buildUtilitySection("Info >>>", rect, source, true);
     }
 
     private Component buildArenaPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
@@ -250,6 +247,7 @@ public class ArenaBattleScreen {
         for (String tileLine : loadArenaBaseLine(contentWidth, 1)) {
             content.addComponent(new Label(fittedLine(tileLine, contentWidth)));
         }
+
         content.setPreferredSize(new TerminalSize(rect.width(), rect.height()));
         return content;
     }
@@ -285,6 +283,7 @@ public class ArenaBattleScreen {
         for (String line : spriteLines) {
             block.addComponent(new Label(fittedLine(line, width)));
         }
+
         block.setPreferredSize(new TerminalSize(width, height));
         return block;
     }
@@ -307,6 +306,7 @@ public class ArenaBattleScreen {
         if (enemyCount > 1) {
             spacing = Math.min(2, Math.max(0, (width - (slotWidth * enemyCount)) / (enemyCount - 1)));
         }
+
         int usedWidth = (slotWidth * enemyCount) + (spacing * Math.max(0, enemyCount - 1));
         int leftPadding = Math.max(0, width - usedWidth);
 
@@ -323,6 +323,7 @@ public class ArenaBattleScreen {
                 enemyRow.addComponent(new EmptySpace(new TerminalSize(spacing, 1)));
             }
         }
+
         enemyRow.setPreferredSize(new TerminalSize(width, height));
         return enemyRow;
     }
@@ -337,6 +338,7 @@ public class ArenaBattleScreen {
         } else {
             targetLabel = index == selectedIndex ? "SEL*" : "SEL";
         }
+
         boolean hasEffects = !enemy.getActiveEffects().isEmpty();
         int fixedLines = hasEffects ? 3 : 2;
         List<String> spriteLines = loadEnemySpriteLines(enemy, contentWidth, spriteRows);
@@ -382,16 +384,12 @@ public class ArenaBattleScreen {
     }
 
     private String effectLine(EnemyViewState enemy) {
-        if (enemy.getActiveEffects().isEmpty()) {
-            return "Effects: -";
-        }
-        String joined = enemy.getActiveEffects().stream()
+        return enemy.getActiveEffects().stream()
             .map(effect -> effect.getIconSymbol() == null || effect.getIconSymbol().isBlank()
                 ? effect.getEffectName()
                 : effect.getIconSymbol())
             .reduce((left, right) -> left + " " + right)
-            .orElse("-");
-        return "Effects: " + joined;
+            .orElse("");
     }
 
     private String hpLine(EnemyViewState enemy, int maxWidth) {
@@ -401,25 +399,34 @@ public class ArenaBattleScreen {
         return bar + " " + enemy.getCurrentHp() + "/" + enemy.getMaxHp();
     }
 
-    private Component buildUtilitySection(String title, ArenaLayoutCalculator.Rect rect, List<String> contentLines) {
+    private Component buildUtilitySection(String title, ArenaLayoutCalculator.Rect rect, List<String> contentLines, boolean keepNewestVisible) {
         int innerWidth = Math.max(1, rect.width() - 2);
         int bodyRows = Math.max(1, rect.height() - 2);
+        List<String> wrapped = wrapLines(contentLines, innerWidth);
 
-        Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
-        panel.addComponent(new Label(formatEmbeddedTopBorder(title, innerWidth)));
-
-        for (int i = 0; i < bodyRows; i++) {
-            String line = i < contentLines.size() ? contentLines.get(i) : "";
-            panel.addComponent(new Label(formatBodyBorderLine(line, innerWidth)));
+        List<String> visible;
+        if (wrapped.size() <= bodyRows) {
+            visible = wrapped;
+        } else if (keepNewestVisible) {
+            visible = wrapped.subList(wrapped.size() - bodyRows, wrapped.size());
+        } else {
+            visible = wrapped.subList(0, bodyRows);
         }
 
-        panel.addComponent(new Label(DialogComposer.formatBottomBorder(innerWidth, asciiMode)));
+        Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
+        panel.addComponent(buildTopBorderRow(title, innerWidth));
+
+        for (int i = 0; i < bodyRows; i++) {
+            String line = i < visible.size() ? visible.get(i) : "";
+            panel.addComponent(buildBodyBorderRow(line, innerWidth));
+        }
+
+        panel.addComponent(buildBottomBorderRow(innerWidth));
         panel.setPreferredSize(new TerminalSize(rect.width(), rect.height()));
         return panel;
     }
 
-    private String formatEmbeddedTopBorder(String title, int borderWidth) {
-        int innerWidth = Math.max(1, borderWidth);
+    private Component buildTopBorderRow(String title, int innerWidth) {
         String horizontal = asciiMode ? "-" : "─";
         String topLeft = asciiMode ? "+" : "╭";
         String topRight = asciiMode ? "+" : "╮";
@@ -429,19 +436,87 @@ public class ArenaBattleScreen {
         if (label.length() > innerWidth) {
             label = fittedLine(label, innerWidth);
         }
+        String middle = padRight(label + horizontal.repeat(Math.max(0, innerWidth - label.length())), innerWidth);
 
-        int rightPadding = Math.max(0, innerWidth - label.length());
-
-        return topLeft
-            + label
-            + horizontal.repeat(rightPadding)
-            + topRight;
+        Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL));
+        Label left = new Label(topLeft);
+        Label center = new Label(middle);
+        center.setPreferredSize(new TerminalSize(innerWidth, 1));
+        Label right = new Label(topRight);
+        row.addComponent(left);
+        row.addComponent(center);
+        row.addComponent(right);
+        return row;
     }
 
-    private String formatBodyBorderLine(String text, int innerWidth) {
+    private Component buildBodyBorderRow(String text, int innerWidth) {
         String vertical = asciiMode ? "|" : "│";
         String content = fittedLine(text == null ? "" : text, innerWidth);
-        return vertical + padRight(content, innerWidth) + vertical;
+
+        Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL));
+        Label left = new Label(vertical);
+        Label center = new Label(padRight(content, innerWidth));
+        center.setPreferredSize(new TerminalSize(innerWidth, 1));
+        Label right = new Label(vertical);
+        row.addComponent(left);
+        row.addComponent(center);
+        row.addComponent(right);
+        return row;
+    }
+
+    private Component buildBottomBorderRow(int innerWidth) {
+        String horizontal = asciiMode ? "-" : "─";
+        String bottomLeft = asciiMode ? "+" : "╰";
+        String bottomRight = asciiMode ? "+" : "╯";
+
+        Panel row = new Panel(new LinearLayout(Direction.HORIZONTAL));
+        Label left = new Label(bottomLeft);
+        Label center = new Label(horizontal.repeat(innerWidth));
+        center.setPreferredSize(new TerminalSize(innerWidth, 1));
+        Label right = new Label(bottomRight);
+        row.addComponent(left);
+        row.addComponent(center);
+        row.addComponent(right);
+        return row;
+    }
+
+    private List<String> wrapLines(List<String> lines, int maxWidth) {
+        List<String> wrapped = new ArrayList<>();
+        int width = Math.max(1, maxWidth);
+        if (lines == null || lines.isEmpty()) {
+            return wrapped;
+        }
+
+        for (String line : lines) {
+            String value = line == null ? "" : line;
+            if (value.isEmpty()) {
+                wrapped.add("");
+                continue;
+            }
+
+            String remaining = value;
+            while (!remaining.isEmpty()) {
+                if (remaining.length() <= width) {
+                    wrapped.add(remaining);
+                    break;
+                }
+
+                int breakAt = remaining.lastIndexOf(' ', width);
+                if (breakAt <= 0) {
+                    breakAt = width;
+                    wrapped.add(remaining.substring(0, breakAt));
+                    remaining = remaining.substring(breakAt);
+                } else {
+                    wrapped.add(remaining.substring(0, breakAt));
+                    remaining = remaining.substring(breakAt + 1);
+                }
+
+                while (!remaining.isEmpty() && remaining.charAt(0) == ' ') {
+                    remaining = remaining.substring(1);
+                }
+            }
+        }
+        return wrapped;
     }
 
     private String padRight(String value, int width) {
