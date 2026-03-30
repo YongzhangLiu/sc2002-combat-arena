@@ -22,6 +22,14 @@ public final class SpriteCatalog {
         return load("arena", name, "normal");
     }
 
+    public static AsciiSprite loadCloudStrip(int maxWidth) throws IOException {
+        AsciiSprite clouds = composeTiledWithoutVariant("cloud", "cloud", maxWidth);
+        if (clouds != null) {
+            return clouds;
+        }
+        throw new IOException("No cloud tiles found under assets/sprites/cloud");
+    }
+
     public static AsciiSprite load(String category, String name, String variant) throws IOException {
         Path filePath = ROOT.resolve(category).resolve(name + "_" + variant + ".txt");
         List<String> lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
@@ -60,6 +68,47 @@ public final class SpriteCatalog {
         List<AsciiSprite> tiles = new ArrayList<>();
         for (int index = 1; index <= 8; index++) {
             Path tilePath = ROOT.resolve("arena").resolve(name + "_tile" + index + "_" + variant + ".txt");
+            if (!Files.exists(tilePath)) {
+                continue;
+            }
+            List<String> lines = Files.readAllLines(tilePath, StandardCharsets.UTF_8);
+            tiles.add(new AsciiSprite(lines));
+        }
+        return tiles;
+    }
+
+    private static AsciiSprite composeTiledWithoutVariant(String category, String name, int targetWidth) throws IOException {
+        List<AsciiSprite> tiles = loadTilesWithoutVariant(category, name);
+        if (tiles.isEmpty()) {
+            return null;
+        }
+
+        int width = Math.max(1, targetWidth);
+        int height = 0;
+        for (AsciiSprite tile : tiles) {
+            height = Math.max(height, tile.getHeight());
+        }
+
+        List<String> composedLines = new ArrayList<>();
+        for (int row = 0; row < height; row++) {
+            StringBuilder lineBuilder = new StringBuilder();
+            int tileIndex = 0;
+            while (lineBuilder.length() < width) {
+                AsciiSprite tile = tiles.get(tileIndex % tiles.size());
+                String rowText = row < tile.getHeight() ? tile.getLines().get(row) : "";
+                lineBuilder.append(padRight(rowText, tile.getWidth()));
+                tileIndex++;
+            }
+            composedLines.add(lineBuilder.substring(0, width));
+        }
+
+        return new AsciiSprite(composedLines);
+    }
+
+    private static List<AsciiSprite> loadTilesWithoutVariant(String category, String name) throws IOException {
+        List<AsciiSprite> tiles = new ArrayList<>();
+        for (int index = 1; index <= 8; index++) {
+            Path tilePath = ROOT.resolve(category).resolve(name + "_tile" + index + ".txt");
             if (!Files.exists(tilePath)) {
                 continue;
             }

@@ -232,7 +232,13 @@ public class ArenaBattleScreen {
 
         Panel content = new Panel(new LinearLayout(Direction.VERTICAL));
 
-        int actorRows = Math.max(3, arenaRows - 1);
+        int cloudRows = Math.max(0, Math.min(6, arenaRows - 4));
+        int actorRows = Math.max(3, arenaRows - cloudRows - 1);
+
+        for (String cloudLine : loadCloudLines(contentWidth, cloudRows)) {
+            content.addComponent(new Label(fittedLine(cloudLine, contentWidth)));
+        }
+
         int enemyCount = Math.max(1, state.getAliveEnemies().size());
         int minEnemyContentWidth = getMaxEnemySpriteWidth(state);
         int minEnemySlotWidth = Math.max(8, minEnemyContentWidth + 1);
@@ -657,6 +663,35 @@ public class ArenaBattleScreen {
         } catch (IOException exception) {
             return List.of("_".repeat(Math.max(1, maxWidth)));
         }
+    }
+
+    private List<String> loadCloudLines(int maxWidth, int rows) {
+        if (rows <= 0) {
+            return List.of();
+        }
+        try {
+            List<String> lines = EnemySpriteClipper.clipRight(SpriteCatalog.loadCloudStrip(maxWidth).getLines(), maxWidth, rows);
+            if (lines.size() >= rows) {
+                return lines;
+            }
+
+            List<String> padded = new ArrayList<>(lines);
+            while (padded.size() < rows) {
+                padded.add(" ".repeat(Math.max(1, maxWidth)));
+            }
+            return padded;
+        } catch (IOException exception) {
+            return blankRows(maxWidth, rows);
+        }
+    }
+
+    private List<String> blankRows(int width, int rows) {
+        List<String> fallback = new ArrayList<>();
+        String blank = " ".repeat(Math.max(1, width));
+        for (int i = 0; i < rows; i++) {
+            fallback.add(blank);
+        }
+        return fallback;
     }
 
     private List<String> loadSprite(String category, String name, int maxWidth, int maxRows) {
