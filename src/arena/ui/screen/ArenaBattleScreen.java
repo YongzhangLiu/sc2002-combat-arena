@@ -1,7 +1,6 @@
 package arena.ui.screen;
 
 import arena.ui.AsciiSprite;
-import arena.ui.DialogComposer;
 import arena.ui.SpriteCatalog;
 import arena.ui.model.ArenaUiCommand;
 import arena.ui.model.ArenaViewState;
@@ -44,6 +43,7 @@ public class ArenaBattleScreen {
     private ArenaLayoutCalculator.LayoutBounds lastLayoutBounds;
     private boolean overlayActive;
     private TerminalSize windowedLayoutSize;
+    private int uiSelectedTargetIndex;
 
     public ArenaBattleScreen() {
         this.layoutCalculator = new ArenaLayoutCalculator();
@@ -57,6 +57,7 @@ public class ArenaBattleScreen {
         this.asciiMode = asciiMode;
         this.overlayActive = false;
         this.windowedLayoutSize = null;
+        this.uiSelectedTargetIndex = 0;
 
         this.window = new BasicWindow("Arena Battle");
         window.setHints(fullScreen
@@ -204,11 +205,13 @@ public class ArenaBattleScreen {
         String playerHp = state.getPlayerState() == null
             ? "-"
             : state.getPlayerState().getCurrentHp() + "/" + state.getPlayerState().getMaxHp();
+        int selectedIndex = getSelectedTargetIndex(state.getAliveEnemies().size());
+        String targetDisplay = state.getAliveEnemies().isEmpty() ? "-" : String.valueOf(selectedIndex + 1);
 
         List<String> body = List.of(
             "Player HP: " + playerHp,
             "Enemies: " + state.getAliveEnemies().size(),
-            "Target: " + (state.getCurrentTargetIndex() + 1)
+            "Target: " + targetDisplay
         );
         return buildUtilitySection("Status", rect, body, false);
     }
@@ -342,9 +345,10 @@ public class ArenaBattleScreen {
         }
 
         int spriteRows = Math.max(1, height - 4);
+        int selectedIndex = getSelectedTargetIndex(state.getAliveEnemies().size());
         for (int index = 0; index < state.getAliveEnemies().size(); index++) {
             EnemyViewState enemy = state.getAliveEnemies().get(index);
-            enemyRow.addComponent(buildEnemySlot(enemy, index, state.getCurrentTargetIndex(), slotWidth, height, spriteRows));
+            enemyRow.addComponent(buildEnemySlot(enemy, index, selectedIndex, slotWidth, height, spriteRows));
             if (index < state.getAliveEnemies().size() - 1 && spacing > 0) {
                 enemyRow.addComponent(new EmptySpace(new TerminalSize(spacing, 1)));
             }
@@ -400,32 +404,31 @@ public class ArenaBattleScreen {
     }
 
     private void onTargetSelected(int index) {
-        enqueueCommand(new ArenaUiCommand.SelectTarget(index));
-
-        if (lastRenderedState == null || window == null || !window.isVisible()) {
+        if (lastRenderedState == null) {
             return;
         }
 
-        int boundedIndex = Math.max(0, Math.min(index, Math.max(0, lastRenderedState.getAliveEnemies().size() - 1)));
-        ArenaViewState updated = withCurrentTargetIndex(lastRenderedState, boundedIndex);
-        render(updated);
+        int enemyCount = lastRenderedState.getAliveEnemies().size();
+        if (enemyCount <= 0) {
+            return;
+        }
+
+        uiSelectedTargetIndex = Math.max(0, Math.min(index, enemyCount - 1));
+
+        if (window == null || !window.isVisible()) {
+            return;
+        }
+
+        render(lastRenderedState);
     }
 
-    private ArenaViewState withCurrentTargetIndex(ArenaViewState state, int targetIndex) {
-        return new ArenaViewState(
-            state.getRoundNumber(),
-            state.getTurnOwnerName(),
-            state.isPlayerTurn(),
-            state.getPlayerState(),
-            state.getAliveEnemies(),
-            targetIndex,
-            state.getAvailableActions(),
-            state.getAvailableItems(),
-            state.getCombatLog(),
-            state.getFeedbackMessage(),
-            state.isVictory(),
-            state.isDefeat()
-        );
+    private int getSelectedTargetIndex(int enemyCount) {
+        if (enemyCount <= 0) {
+            uiSelectedTargetIndex = 0;
+            return 0;
+        }
+        uiSelectedTargetIndex = Math.max(0, Math.min(uiSelectedTargetIndex, enemyCount - 1));
+        return uiSelectedTargetIndex;
     }
 
     private List<String> loadEnemySpriteLines(EnemyViewState enemy, int maxWidth, int maxRows) {
