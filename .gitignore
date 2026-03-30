@@ -5,3 +5,5 @@ target/
 .vscode/
 .idea/
 *.iml
+
+src/**/*.md
