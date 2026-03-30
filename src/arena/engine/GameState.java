@@ -14,6 +14,7 @@ public class GameState {
     private static Player player1;
     private static List<List<Enemy>> enemies = new ArrayList<>();
     private static List<Combatant> turnOrder = new ArrayList<Combatant>();
+    private static boolean updateStatus; //flag to show that gameState has been changed
 
     /*
     public static void gameStart(Player player, List<List<Enemy>> enemyList){     //Call when battle starts
@@ -47,6 +48,10 @@ public class GameState {
 
     public static void newTurnOrder(){
         turnOrder = createTurnOrder(player1, enemies.get(0));
+    }
+
+    public static boolean getUpdateStatus(){
+        return updateStatus;
     }
 
     public static Player getPlayer(){
