@@ -77,7 +77,7 @@ public final class UiPreview {
                 0,     // playerHp
                 2,    // totalRounds
                 3,     // enemiesRemaining
-                "You were killed by Goblin!", // lastLogEntry
+                "You were killed by Goblin", // lastLogEntry
                 new EndgameScreen.EndgameCallbacks() {
                     @Override
                     public void onBackToMenu() {

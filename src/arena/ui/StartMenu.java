@@ -42,7 +42,7 @@ import static arena.ui.util.TextFormatUtil.fittedLine;
  * Spins up start menu and calls setup screens
 */
 public class StartMenu {
-    private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
+    private static final TerminalSize WINDOWED_SIZE = new TerminalSize(120, 42);
 
     public static void main(String[] args) throws IOException {
         UiConfig config = new UiConfig(false, false);

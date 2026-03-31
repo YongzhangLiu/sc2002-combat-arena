@@ -34,6 +34,12 @@ public class GameState {
         return combatLog;
     }
 
+    public static void clearLog() {
+        if (combatLog != null) {
+            combatLog.clear();
+        }
+    }
+
     /*
     public static void gameStart(Player player, List<List<Enemy>> enemyList){     //Call when battle starts
         currentRound = 1;

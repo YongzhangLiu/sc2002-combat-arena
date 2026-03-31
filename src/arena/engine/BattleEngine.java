@@ -41,22 +41,22 @@ public class BattleEngine{
         if (player.beginTurn()) {
             switch (playerChoice) {
                 case 1: //basic attack
-                    GameState.addLog(player.getName() + " performed an attack on " + targetEnemy.getName() + "!");
+                    GameState.addLog(player.getName() + " performed an attack on " + targetEnemy.getName());
                     playerAction.bAttack(player, targetEnemy);
                     break;
                 case 2: //defend
-                    GameState.addLog(player.getName() + " is defending!");
+                    GameState.addLog(player.getName() + " is defending");
                     playerAction.defend(player);
                     break;
                 case 3: //item
                     String itemName = item != null ? item.getName() : "an unknown item";
-                    GameState.addLog(player.getName() + " used " + itemName + "!");
+                    GameState.addLog(player.getName() + " used " + itemName);
                     playerAction.consumeItem(player, targetEnemy, currentWave, item);
                     break;
                 case 4: //special
                     // CD logic is currently handled in UI, this is unreachable if skill is in CD. 
                     String skillName = player instanceof arena.model.combatant.Warrior ? "Shield Bash" : "Arcane Blast";
-                    GameState.addLog(player.getName() + " used " + skillName + "!");
+                    GameState.addLog(player.getName() + " used " + skillName + " on " + targetEnemy.getName());
                     playerAction.specialSkill(player, targetEnemy, currentWave);
                     break;
                 default:
@@ -98,7 +98,7 @@ public class BattleEngine{
             if (currentAttacker instanceof Enemy enemy) {
                 if (enemy.isAlive() && enemy.beginTurn()) {
                     if (enemy.getStrategy() != null) {
-                        GameState.addLog(enemy.getName() + " performed an attack on " + player.getName() + "!");
+                        GameState.addLog(enemy.getName() + " performed an attack on " + player.getName());
                         List<Player> targetList = new ArrayList<>();
                         targetList.add(player);
                         enemy.getStrategy().execute(enemy, targetList);
@@ -116,7 +116,7 @@ public class BattleEngine{
             
             // Check if player died
             if (!player.isAlive()) {
-                GameState.addLog(player.getName() + " was killed by " + currentAttacker.getName() + "!");
+                GameState.addLog(player.getName() + " was killed by " + currentAttacker.getName());
             }
             
             if (GameState.advanceWaveIfCleared()) {

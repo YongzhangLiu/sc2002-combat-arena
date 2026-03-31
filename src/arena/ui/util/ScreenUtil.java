@@ -11,7 +11,7 @@ import arena.ui.sprite.SpriteCatalog;
 import java.io.IOException;
 
 public final class ScreenUtil {
-    private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
+    private static final TerminalSize WINDOWED_SIZE = new TerminalSize(120, 42);
 
     private ScreenUtil() {
     }

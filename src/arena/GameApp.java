@@ -117,6 +117,7 @@ public class GameApp {
             
             @Override
             public void onBackToMenu() {
+                GameState.clearLog();
                 battleScreen.close();
             }
         });
@@ -161,6 +162,7 @@ public class GameApp {
             arena.ui.screen.EndgameScreen.show(screen, gui, false, false, victory, hp, totalRounds, enemiesRemaining, lastLog, new arena.ui.screen.EndgameScreen.EndgameCallbacks() {
                 @Override
                 public void onBackToMenu() {
+                    GameState.clearLog(); // clear the log specifically on endgame
                     // Loop naturally goes back to StartMenu because runSession is in a while loop inside StartMenu
                 }
 
