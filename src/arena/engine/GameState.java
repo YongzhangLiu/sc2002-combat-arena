@@ -66,7 +66,7 @@ public class GameState {
 
     public static void newTurnOrder(){
         arena.strategy.TurnOrderStrategy strategy = new arena.strategy.SpeedBasedTurnOrder();
-turnOrder = strategy.buildTurnOrder(player1, enemies.get(0)); 
+        turnOrder = strategy.buildTurnOrder(player1, enemies.get(0)); 
     }
 
     public static boolean getUpdateStatus(){
@@ -86,10 +86,16 @@ turnOrder = strategy.buildTurnOrder(player1, enemies.get(0));
     }
 
     public static int getEnemyCount(List<List<Enemy>> enemies){
+        if (enemies == null || enemies.isEmpty()) {
+            return 0;
+        }
         return enemies.get(0).size();
     }
 
     public static List<Enemy> getCurrentWave(){
+        if (enemies == null || enemies.isEmpty()) {
+            return new ArrayList<>();
+        }
         return enemies.get(0);
     }
 
@@ -98,11 +104,23 @@ turnOrder = strategy.buildTurnOrder(player1, enemies.get(0));
     }
 
     public static int checkEndCondition(){ //if enemies are dead, returns 1
-        if (enemies.isEmpty()) {          //if player is dead, returns 2
+        if (enemies == null || enemies.isEmpty() || (enemies.size() == 1 && enemies.get(0).isEmpty())) {
             return 1;                      //if no condition fulfilled, returns 0, game continues
         }else if (!player1.isAlive()) {
             return 2;
         }else return 0;
+    }
+    
+    public static boolean advanceWaveIfCleared() {
+        if (enemies != null && !enemies.isEmpty() && enemies.get(0).isEmpty()) {
+            enemies.remove(0); // Pop empty wave
+            if (!enemies.isEmpty() && !enemies.get(0).isEmpty()) {
+                addLog("A new wave of enemies appears!");
+                newTurnOrder();
+                return true;
+            }
+        }
+        return false;
     }
 
 }

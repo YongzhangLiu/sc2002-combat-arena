@@ -12,12 +12,13 @@ public class SpeedBasedTurnOrder implements TurnOrderStrategy {
     @Override
     public List<Combatant> buildTurnOrder(Player player, List<Enemy> enemies) {
         List<Combatant> order = new ArrayList<>();
-        order.add(player);
-        order.addAll(enemies);
-
-        //Sort descending by speed —> highest SPD goes first
-        order.sort(Comparator.comparingInt(Combatant::getSpeed).reversed());
-
+        order.add(player); // Player always goes first!
+        
+        List<Combatant> enemyOrder = new ArrayList<>(enemies);
+        //Sort enemies descending by speed
+        enemyOrder.sort(Comparator.comparingInt(Combatant::getSpeed).reversed());
+        
+        order.addAll(enemyOrder);
         return order;
     }
 }

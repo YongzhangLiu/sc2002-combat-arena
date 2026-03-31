@@ -42,13 +42,136 @@ public class GameApp {
         try {
             // 1. Launch Start Menu
             StartMenu.launch(screen, gui, false, false, setup -> {
-                // TODO: 2. Initialize Engine and Start UI loop
+                startGameSession(setup);
             });
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             closeTerminal();
         }
+    }
+    
+    private void startGameSession(arena.ui.GameSetup setup) {
+        GameInit init = new arena.engine.GameInit();
+        
+        // 1. Init Player Class
+        int classChoice = "Wizard".equalsIgnoreCase(setup.playerClass) ? 2 : 1;
+        arena.model.combatant.Player player = init.initPlayers(classChoice, "Player");
+        
+        // 2. Add Item
+        int itemChoice = 1;
+        if ("Power Stone".equalsIgnoreCase(setup.item)) itemChoice = 2;
+        else if ("Smoke Bomb".equalsIgnoreCase(setup.item)) itemChoice = 3;
+        init.chooseItems(player, itemChoice);
+        
+        // 3. Init Enemies
+        int diffChoice = 1;
+        if ("Medium".equalsIgnoreCase(setup.difficulty)) diffChoice = 2;
+        else if ("Hard".equalsIgnoreCase(setup.difficulty)) diffChoice = 3;
+        init.initEnemies(diffChoice);
+        
+        // 4. Start Game State
+        init.startGame();
+        
+        // 5. Connect UI
+        BattleEngine engine = new BattleEngine();
+        
+        // Pre-advance turn queue in case an enemy is faster and goes first
+        int initialState = engine.advanceTurnQueue();
+        if (checkEndCondition(initialState, false)) {
+            return;
+        }
+
+        ArenaBattleScreen battleScreen = new ArenaBattleScreen();
+        battleScreen.initialize(screen, gui, false, false);
+        
+        // 6. Set Callbacks for Turn Resolution
+        battleScreen.setCallbacks(new ArenaBattleScreen.ActionCallbacks() {
+            @Override
+            public void onBasicAttack(int targetIndex) {
+                int state = engine.executePlayerTurn(1, targetIndex, null);
+                handleTurnResult(state, battleScreen, engine);
+            }
+            
+            @Override
+            public void onDefend() {
+                int state = engine.executePlayerTurn(2, 0, null);
+                handleTurnResult(state, battleScreen, engine);
+            }
+            
+            @Override
+            public void onUseItem(int itemIndex, int targetIndex) {
+                arena.model.item.Item item = null;
+                if (GameState.getPlayer() != null && itemIndex >= 0 && itemIndex < GameState.getPlayer().getInventory().size()) {
+                    item = GameState.getPlayer().getInventory().get(itemIndex);
+                }
+                int state = engine.executePlayerTurn(3, targetIndex, item);
+                handleTurnResult(state, battleScreen, engine);
+            }
+            
+            @Override
+            public void onSpecialSkill(int targetIndex) {
+                int state = engine.executePlayerTurn(4, targetIndex, null);
+                handleTurnResult(state, battleScreen, engine);
+            }
+            
+            @Override
+            public void onBackToMenu() {
+                battleScreen.close();
+            }
+        });
+        
+        // 7. Render loops blocking wait call
+        ArenaViewState viewState = arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Battle Started!");
+        battleScreen.showAndWait(viewState);
+    }
+    
+    private void handleTurnResult(int state, ArenaBattleScreen battleScreen, BattleEngine engine) {
+        // Continue enemies queue if player ended their turn
+        if (state == 0) {
+            state = engine.advanceTurnQueue();
+        }
+        
+        boolean isGameOver = checkEndCondition(state, true);
+        if (isGameOver) {
+            battleScreen.close(); // Close battle screen, return control and then show endgame screen
+        } else {
+            // Update battle UI with new states
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Turn Advanced."));
+        }
+    }
+    
+    private boolean checkEndCondition(int state, boolean triggerEndgameScreen) {
+        boolean victory = (state == 1);
+        boolean defeat = (state == 2);
+        
+        if (!victory && !defeat) {
+            return false;
+        }
+        
+        if (triggerEndgameScreen) {
+            String lastLog = "";
+            if (GameState.getCombatLog() != null && !GameState.getCombatLog().isEmpty()) {
+                lastLog = GameState.getCombatLog().peekLast();
+            }
+            int hp = GameState.getPlayer() != null ? GameState.getPlayer().getHp() : 0;
+            int totalRounds = GameState.getCurrentRound();
+            int enemiesRemaining = GameState.getCurrentWave() != null ? GameState.getCurrentWave().size() : 0;
+            
+            arena.ui.screen.EndgameScreen.show(screen, gui, false, false, victory, hp, totalRounds, enemiesRemaining, lastLog, new arena.ui.screen.EndgameScreen.EndgameCallbacks() {
+                @Override
+                public void onBackToMenu() {
+                    // Loop naturally goes back to StartMenu because runSession is in a while loop inside StartMenu
+                }
+
+                @Override
+                public void onQuit() {
+                    System.exit(0);
+                }
+            });
+        }
+        
+        return true;
     }
     
     private void closeTerminal() {

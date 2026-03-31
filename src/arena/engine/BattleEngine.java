@@ -14,6 +14,12 @@ public class BattleEngine{
     public void endRound(){
         int currentRound = GameState.getCurrentRound();
         GameState.setCurrentRound(currentRound+1);
+        
+        Player player = GameState.getPlayer();
+        if (player != null) {
+            player.decrementCooldownAfterTurn();
+        }
+        
         GameState.newTurnOrder(); // Ensure turn order is rebuilt for the next round
     }
 
@@ -56,13 +62,7 @@ public class BattleEngine{
                 default:
                     break;
             }
-            if (!targetEnemy.isAlive()) {
-                GameState.addLog(targetEnemy.getName() + " was defeated!");
-                currentWave.remove(targetEnemy);
-                GameState.setCurrentWave(currentWave);
-                // Also remove from turn order so dead enemies don't attack
-                GameState.getTurnOrder().remove(targetEnemy);
-            }
+            sweepDeadEnemies();
         }
         
         List<Combatant> turnOrder = GameState.getTurnOrder();
@@ -104,14 +104,23 @@ public class BattleEngine{
                         enemy.getStrategy().execute(enemy, targetList);
                     }
                 }
+                sweepDeadEnemies();
             }
             
-            // Pop the enemy off the queue
-            turnOrder.remove(0);
+            // Re-fetch turn order as sweepDeadEnemies might have modified it
+            turnOrder = GameState.getTurnOrder();
+            if (!turnOrder.isEmpty() && turnOrder.get(0) == currentAttacker) {
+                // Pop the enemy off the queue
+                turnOrder.remove(0);
+            }
             
             // Check if player died
             if (!player.isAlive()) {
                 GameState.addLog(player.getName() + " was killed by " + currentAttacker.getName() + "!");
+            }
+            
+            if (GameState.advanceWaveIfCleared()) {
+                return advanceTurnQueue(); // Immediately restart logic with new queue
             }
             
             // Ensure we check end conds periodically (ex: enemy killed player)
@@ -125,5 +134,25 @@ public class BattleEngine{
         // After starting a new round, we still need to potentially run enemies that are faster than the player
         // Recursing allows that safely!
         return advanceTurnQueue();
+    }
+
+    private void sweepDeadEnemies() {
+        List<Enemy> currentWave = GameState.getCurrentWave();
+        if (currentWave != null) {
+            boolean removed = false;
+            for (int i = currentWave.size() - 1; i >= 0; i--) {
+                Enemy e = currentWave.get(i);
+                if (!e.isAlive()) {
+                    GameState.addLog(e.getName() + " was defeated!");
+                    currentWave.remove(i);
+                    GameState.getTurnOrder().remove(e);
+                    removed = true;
+                }
+            }
+            if (removed) {
+                GameState.setCurrentWave(currentWave);
+            }
+        }
+        GameState.advanceWaveIfCleared();
     }
 }
