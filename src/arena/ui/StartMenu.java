@@ -52,23 +52,44 @@ public class StartMenu {
     }
 
     public static void launch(boolean fullScreen, boolean asciiMode, Consumer<GameSetup> onSetupReady) throws IOException {
+        launch(null, null, fullScreen, asciiMode, onSetupReady);
+    }
+
+    public static void launch(Screen sharedScreen, MultiWindowTextGUI sharedGui, boolean fullScreen, boolean asciiMode, Consumer<GameSetup> onSetupReady) throws IOException {
         UiConfig config = new UiConfig(fullScreen, asciiMode);
 
         boolean keepRunning = true;
         while (keepRunning) {
-            keepRunning = runSession(config, onSetupReady);
+            keepRunning = runSession(sharedScreen, sharedGui, config, onSetupReady);
         }
     }
 
-    private static boolean runSession(UiConfig config, Consumer<GameSetup> onSetupReady) throws IOException {
+    private static Screen createLocalScreen(UiConfig config) throws IOException {
         DefaultTerminalFactory terminalFactory = new DefaultTerminalFactory();
         if (!config.fullScreen) {
             terminalFactory.setInitialTerminalSize(WINDOWED_SIZE);
         }
-
         Screen screen = terminalFactory.createScreen();
         screen.startScreen();
         ScreenUtil.setMouseReporting(screen, true);
+        return screen;
+    }
+
+    private static MultiWindowTextGUI createLocalGui(Screen screen) {
+        MultiWindowTextGUI gui = new MultiWindowTextGUI(
+            screen,
+            new DefaultWindowManager(),
+            new EmptySpace(TextColor.ANSI.DEFAULT)
+        );
+        applyUniformButtonTheme(gui);
+        return gui;
+    }
+
+    private static boolean runSession(Screen sharedScreen, MultiWindowTextGUI sharedGui, UiConfig config, Consumer<GameSetup> onSetupReady) throws IOException {
+        final Screen screen = sharedScreen != null ? sharedScreen : createLocalScreen(config);
+        final MultiWindowTextGUI gui = sharedGui != null ? sharedGui : createLocalGui(screen);
+        boolean ownsTerminal = false; // Always assume shared terminal in master flow
+
 
         SessionResult result = new SessionResult(false, false);
         TerminalSize terminalSize = screen.getTerminalSize();
@@ -79,13 +100,6 @@ public class StartMenu {
         int viewportColumns = activeWindowSize.getColumns();
 
         try {
-            MultiWindowTextGUI gui = new MultiWindowTextGUI(
-                screen,
-                new DefaultWindowManager(),
-                new EmptySpace(TextColor.ANSI.DEFAULT)
-            );
-            applyUniformButtonTheme(gui);
-
             BasicWindow window = new BasicWindow();
             window.setHints(config.fullScreen
                 ? Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.FULL_SCREEN, Window.Hint.EXPANDED)
@@ -133,8 +147,10 @@ public class StartMenu {
 
             gui.addWindowAndWait(window);
         } finally {
-            ScreenUtil.setMouseReporting(screen, false);
-            screen.stopScreen();
+            if (ownsTerminal && screen != null) {
+                ScreenUtil.setMouseReporting(screen, false);
+                screen.stopScreen();
+            }
         }
 
         if (result.exitRequested) {
@@ -278,7 +294,7 @@ public class StartMenu {
         return fullScreen ? "Window Mode: Fullscreen" : "Window Mode: Windowed";
     }
 
-    private static void applyUniformButtonTheme(MultiWindowTextGUI gui) {
+    public static void applyUniformButtonTheme(MultiWindowTextGUI gui) {
         Theme baseTheme = LanternaThemes.getDefaultTheme();
         gui.setTheme(new DelegatingTheme(baseTheme) {
             @Override
