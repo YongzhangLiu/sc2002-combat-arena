@@ -62,6 +62,8 @@ public final class ArenaPreviewStateFactory {
             base.getBaseDefense(),
             base.getSpeed(),
             playerClass.toLowerCase(),
+            2,
+            false,
             Collections.<StatusIconViewState>emptyList()
         );
     }

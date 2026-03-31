@@ -48,6 +48,7 @@ public class BattleEngine{
                     playerAction.consumeItem(player, targetEnemy, currentWave, item);
                     break;
                 case 4: //special
+                    // CD logic is currently handled in UI, this is unreachable if skill is in CD. 
                     String skillName = player instanceof arena.model.combatant.Warrior ? "Shield Bash" : "Arcane Blast";
                     GameState.addLog(player.getName() + " used " + skillName + "!");
                     playerAction.specialSkill(player, targetEnemy, currentWave);

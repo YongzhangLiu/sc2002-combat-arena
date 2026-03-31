@@ -18,8 +18,8 @@ public final class UiPreview {
         System.out.println("Starting UI Preview Mode...");
         
         // Uncomment the screen you want to test
-        // previewStartMenu();
-        previewEndgameScreen();
+        previewStartMenu();
+        // previewEndgameScreen();
     }
 
     private static void previewStartMenu() throws IOException {

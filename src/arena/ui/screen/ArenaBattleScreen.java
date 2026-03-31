@@ -157,6 +157,15 @@ public class ArenaBattleScreen {
         List<String> skillLines = new ArrayList<>();
         skillLines.add("Special");
         skillLines.addAll(loadSkillSprite(state, rightWidth, 5));
+        
+        if (state.getPlayerState() != null) {
+            int cd = state.getPlayerState().getSpecialSkillCooldown();
+            if (cd > 0) {
+                skillLines.add(" CD: " + cd);
+            } else {
+                skillLines.add(" Ready");
+            }
+        }
 
         int bodyRows = Math.max(1, rect.height() - 2);
         List<String> body = new ArrayList<>();
@@ -254,9 +263,13 @@ public class ArenaBattleScreen {
         row.addComponent(new Button(fittedLine("Use Item", buttonWidth), () -> {
             if (callbacks != null) callbacks.onUseItem(0, targetIdx); // TODO: Replace 0 with selected item index
         }));
-        row.addComponent(new Button(fittedLine("Special Skill", buttonWidth), () -> {
-            if (callbacks != null) callbacks.onSpecialSkill(targetIdx);
+        
+        boolean skillAvailable = state.getPlayerState() != null && state.getPlayerState().isSpecialSkillAvailable();
+        String skillLabel = skillAvailable ? "Special Skill" : "Skill (CD: " + state.getPlayerState().getSpecialSkillCooldown() + ")";
+        row.addComponent(new Button(fittedLine(skillLabel, buttonWidth), () -> {
+            if (skillAvailable && callbacks != null) callbacks.onSpecialSkill(targetIdx);
         }));
+        
         row.addComponent(new Button("Back to Menu", () -> {
             if (callbacks != null) callbacks.onBackToMenu();
             close();

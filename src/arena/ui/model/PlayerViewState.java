@@ -16,9 +16,12 @@ public class PlayerViewState {
     private final int speed;
     private final String spriteKey; // identifier for sprite lookup
     private final List<StatusIconViewState> activeEffects;
+    private final int specialSkillCooldown;
+    private final boolean isSpecialSkillAvailable;
 
     public PlayerViewState(String name, String type, int currentHp, int maxHp,
                           int attack, int defense, int speed, String spriteKey,
+                          int specialSkillCooldown, boolean isSpecialSkillAvailable,
                           List<StatusIconViewState> activeEffects) {
         this.name = name;
         this.type = type;
@@ -28,6 +31,8 @@ public class PlayerViewState {
         this.defense = defense;
         this.speed = speed;
         this.spriteKey = spriteKey;
+        this.specialSkillCooldown = specialSkillCooldown;
+        this.isSpecialSkillAvailable = isSpecialSkillAvailable;
         this.activeEffects = activeEffects != null
             ? Collections.unmodifiableList(activeEffects)
             : Collections.emptyList();
@@ -67,6 +72,14 @@ public class PlayerViewState {
 
     public List<StatusIconViewState> getActiveEffects() {
         return activeEffects;
+    }
+
+    public int getSpecialSkillCooldown() {
+        return specialSkillCooldown;
+    }
+
+    public boolean isSpecialSkillAvailable() {
+        return isSpecialSkillAvailable;
     }
 
     public boolean isAlive() {
