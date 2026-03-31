@@ -151,7 +151,7 @@ public class ArenaBattleScreen {
         int rightWidth = Math.max(4, innerWidth - spacer - leftWidth);
 
         List<String> itemLines = new ArrayList<>();
-        itemLines.add("Item");
+        itemLines.add(" Item");
         itemLines.addAll(loadInventorySprite(state, leftWidth, 5));
 
         List<String> skillLines = new ArrayList<>();
@@ -286,12 +286,15 @@ public class ArenaBattleScreen {
             return block;
         }
 
-        int spriteRows = Math.max(1, height);
+        int fixedLines = 1;
+        int spriteRows = Math.max(1, height - fixedLines);
         List<String> spriteLines = loadSprite("player", state.getPlayerState().getSpriteKey(), Math.max(6, width), spriteRows);
-        int topPadding = Math.max(0, height - spriteLines.size());
+        int topPadding = Math.max(0, height - fixedLines - spriteLines.size());
         for (int i = 0; i < topPadding; i++) {
             block.addComponent(new Label(""));
         }
+
+        block.addComponent(new Label(fittedLine(" " + hpLine(state.getPlayerState().getCurrentHp(), state.getPlayerState().getMaxHp(), width), width)));
 
         for (String line : spriteLines) {
             block.addComponent(new Label(fittedLine(line, width)));
@@ -395,7 +398,7 @@ public class ArenaBattleScreen {
         if (hasEffects) {
             content.addComponent(new Label(fittedLine(effectLine(enemy), contentWidth)));
         }
-        content.addComponent(new Label(fittedLine(hpLine(enemy, contentWidth), contentWidth)));
+        content.addComponent(new Label(fittedLine(hpLine(enemy.getCurrentHp(), enemy.getMaxHp(), contentWidth), contentWidth)));
         for (String spriteLine : spriteLines) {
             content.addComponent(new Label(fittedLine(spriteLine, contentWidth)));
         }
@@ -464,11 +467,11 @@ public class ArenaBattleScreen {
             .orElse("");
     }
 
-    private String hpLine(EnemyViewState enemy, int maxWidth) {
+    private String hpLine(int currentHp, int maxHp, int maxWidth) {
         int barWidth = Math.max(4, Math.min(10, maxWidth - 10));
-        int filled = Math.max(0, Math.min(barWidth, (int) Math.round((enemy.getCurrentHp() * barWidth) / (double) enemy.getMaxHp())));
-        String bar = "█".repeat(filled) + "-".repeat(Math.max(0, barWidth - filled));
-        return bar + " " + enemy.getCurrentHp() + "/" + enemy.getMaxHp();
+        int filled = Math.max(0, Math.min(barWidth, (int) Math.round((currentHp * barWidth) / (double) maxHp)));
+        String bar = "█".repeat(filled) + "░".repeat(Math.max(0, barWidth - filled));
+        return bar + " " + currentHp + "/" + maxHp;
     }
 
     private Component buildUtilitySection(String title, ArenaLayoutCalculator.Rect rect, List<String> contentLines, boolean keepNewestVisible) {
@@ -638,7 +641,7 @@ public class ArenaBattleScreen {
 
     private List<String> loadInventorySprite(ArenaViewState state, int maxWidth, int maxRows) {
         if (state.getAvailableItems().isEmpty()) {
-            return List.of("[no item]");
+            return loadSprite("item", "no_item", maxWidth, maxRows);
         }
         String itemName = state.getAvailableItems().get(0).toLowerCase().replace(' ', '_');
         return loadSprite("item", itemName, maxWidth, maxRows);

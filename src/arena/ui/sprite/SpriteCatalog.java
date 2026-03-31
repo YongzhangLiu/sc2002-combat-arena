@@ -36,6 +36,12 @@ public final class SpriteCatalog {
         return new AsciiSprite(lines);
     }
 
+    public static AsciiSprite loadExact(String category, String filename) throws IOException {
+        Path filePath = ROOT.resolve(category).resolve(filename);
+        List<String> lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
+        return new AsciiSprite(lines);
+    }
+
     private static AsciiSprite composeTiledArena(String name, String variant, int targetWidth) throws IOException {
         List<AsciiSprite> tiles = loadArenaTiles(name, variant);
         if (tiles.isEmpty()) {

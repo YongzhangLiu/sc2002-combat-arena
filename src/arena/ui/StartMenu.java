@@ -7,6 +7,8 @@ import arena.ui.screen.EnemyInformationScreen;
 import arena.ui.screen.DifficultySelectionScreen;
 import arena.ui.screen.ArenaBattleScreen;
 import arena.ui.screen.ArenaPreviewStateFactory;
+import arena.ui.sprite.AsciiSprite;
+import arena.ui.sprite.SpriteCatalog;
 import com.googlecode.lanterna.bundle.LanternaThemes;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
@@ -109,17 +111,26 @@ public class StartMenu {
             }
 
             Panel panel = new Panel(new LinearLayout());
-            int mainContentRows = 12;
+            int mainContentRows = 15;
             DialogComposer.addVerticalPaddingTop(panel, viewportRows, mainContentRows);
 
-            int mainBorderWidth = Math.max(8, Math.min(30, viewportColumns - 2));
-            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(mainBorderWidth, config.asciiMode))));
-            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("COMBAT  ARENA", mainBorderWidth, config.asciiMode))));
-            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(mainBorderWidth, config.asciiMode))));
+            try {
+                AsciiSprite titleSprite = SpriteCatalog.loadExact("branding", "title.txt");
+                for (String line : titleSprite.getLines()) {
+                    panel.addComponent(DialogComposer.centered(new Label(line)));
+                }
+            } catch (IOException e) {
+                // Fallback if branding file is missing
+                int mainBorderWidth = Math.max(8, Math.min(30, viewportColumns - 2));
+                panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(mainBorderWidth, config.asciiMode))));
+                panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("COMBAT  ARENA", mainBorderWidth, config.asciiMode))));
+                panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(mainBorderWidth, config.asciiMode))));
+            }
+            
             panel.addComponent(new EmptySpace(new TerminalSize(1, 2)));
 
-            panel.addComponent(DialogComposer.centered(new Label("Display: " + (config.fullScreen ? "Fullscreen" : "Windowed"))));
-            panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+            // panel.addComponent(DialogComposer.centered(new Label("Display: " + (config.fullScreen ? "Fullscreen" : "Windowed"))));
+            // panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
             panel.addComponent(DialogComposer.centered(new Button("New Game", () -> {
                 startNewGameFlow(screen, gui, config.fullScreen, config.asciiMode, onSetupReady);
