@@ -3,8 +3,6 @@ package arena.engine;
 import java.util.ArrayList;
 import java.util.List;
 
-import arena.model.action.Action;
-import arena.model.action.BasicAttack;
 import arena.model.combatant.Combatant;
 import arena.model.combatant.Enemy;
 import arena.model.combatant.Player;
@@ -16,52 +14,102 @@ public class BattleEngine{
     public void endRound(){
         int currentRound = GameState.getCurrentRound();
         GameState.setCurrentRound(currentRound+1);
+        GameState.newTurnOrder(); // Ensure turn order is rebuilt for the next round
     }
 
-    // returns 0 if game has not ended. If game over condition is met it returns 1 for win and 2 for loss
-    public int executeTurn(int playerChoice, int target, Item item){
-        List<Combatant> turnOrder = GameState.getTurnOrder();
-        Player player1 = GameState.getPlayer();
+    /**
+     * Executes the Player's chosen action against the target.
+     * Returns the 0, 1 (win), 2 (loss) status.
+     * Use advanceTurnQueue() to let enemies move after player.
+     */
+    public int executePlayerTurn(int playerChoice, int target, Item item){
+        Player player = GameState.getPlayer();
         List<Enemy> currentWave = GameState.getCurrentWave();
+        
+        if (target < 0 || target >= currentWave.size()) {
+            return GameState.checkEndCondition();
+        }
+        
         Enemy targetEnemy = currentWave.get(target);
-        Combatant attacker = turnOrder.get(0);
 
-        if (attacker.beginTurn()) {
-            if (attacker instanceof Enemy){
-                Action bAttack = new BasicAttack();
-                bAttack.execute(attacker, player1, currentWave);
-            }else{
-                switch (playerChoice) {
-                    case 1: //basic attack
-                        playerAction.bAttack(player1, targetEnemy);
-                        break;
-
-                    case 2:  //defend
-                        playerAction.defend(player1);
-                        break;
-
-                    case 3:  //item
-                        playerAction.consumeItem(player1, targetEnemy, currentWave, item);
-                        break;
-
-                    case 4:  //special
-                        playerAction.specialSkill(player1, targetEnemy, currentWave);
-                        break;
-                
-                    default:
-                        break;
-                }
-                if (!targetEnemy.isAlive()) {
-                    currentWave.remove(target);
-                    GameState.setCurrentWave(currentWave);
-                }
+        if (player.beginTurn()) {
+            switch (playerChoice) {
+                case 1: //basic attack
+                    playerAction.bAttack(player, targetEnemy);
+                    break;
+                case 2: //defend
+                    playerAction.defend(player);
+                    break;
+                case 3: //item
+                    playerAction.consumeItem(player, targetEnemy, currentWave, item);
+                    break;
+                case 4: //special
+                    playerAction.specialSkill(player, targetEnemy, currentWave);
+                    break;
+                default:
+                    break;
+            }
+            if (!targetEnemy.isAlive()) {
+                currentWave.remove(targetEnemy);
+                GameState.setCurrentWave(currentWave);
+                // Also remove from turn order so dead enemies don't attack
+                GameState.getTurnOrder().remove(targetEnemy);
             }
         }
-        turnOrder.remove(0);
-        GameState.setTurnOrder(turnOrder); 
-/*im not sure if i need to set the gamestate turnorder array
- or if it automatically changes when i change it in this function */
+        
+        List<Combatant> turnOrder = GameState.getTurnOrder();
+        if (!turnOrder.isEmpty() && turnOrder.get(0) instanceof Player) {
+            turnOrder.remove(0); // Pop the player off the queue since they just went
+        }
+        
         return GameState.checkEndCondition();
     }
 
+    /**
+     * Fast-forwards the engine through enemy turns until it's the Player's turn again, 
+     * or until the wave/game ends.
+     * Use this strictly for letting the engine process automatically without UI input.
+     * Returns 0 for continue, 1 for win, 2 for loss.
+     */
+    public int advanceTurnQueue() {
+        int endCondition = GameState.checkEndCondition();
+        if (endCondition != 0) return endCondition;
+
+        List<Combatant> turnOrder = GameState.getTurnOrder();
+        Player player = GameState.getPlayer();
+
+        while (!turnOrder.isEmpty()) {
+            Combatant currentAttacker = turnOrder.get(0);
+            
+            // If it's a player's turn, we must PAUSE and return to the UI for input
+            if (currentAttacker instanceof Player) {
+                return 0; // Game continues, waiting for UI
+            }
+
+            // It's an Enemy. Process their AI Strategy automatically.
+            if (currentAttacker instanceof Enemy enemy) {
+                if (enemy.isAlive() && enemy.beginTurn()) {
+                    if (enemy.getStrategy() != null) {
+                        List<Player> targetList = new ArrayList<>();
+                        targetList.add(player);
+                        enemy.getStrategy().execute(enemy, targetList);
+                    }
+                }
+            }
+            
+            // Pop the enemy off the queue
+            turnOrder.remove(0);
+            
+            // Ensure we check end conds periodically (ex: enemy killed player)
+            endCondition = GameState.checkEndCondition();
+            if (endCondition != 0) return endCondition;
+        }
+
+        // If queue is empty, the round is over.
+        endRound();
+        
+        // After starting a new round, we still need to potentially run enemies that are faster than the player
+        // Recursing allows that safely!
+        return advanceTurnQueue();
+    }
 }

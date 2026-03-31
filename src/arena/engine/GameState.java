@@ -47,7 +47,8 @@ public class GameState {
     }
 
     public static void newTurnOrder(){
-        // turnOrder = createTurnOrder(player1, enemies.get(0)); // TODO: Implement createTurnOrder 
+        arena.strategy.TurnOrderStrategy strategy = new arena.strategy.SpeedBasedTurnOrder();
+turnOrder = strategy.buildTurnOrder(player1, enemies.get(0)); 
     }
 
     public static boolean getUpdateStatus(){
