@@ -47,7 +47,7 @@ public class GameState {
     }
 
     public static void newTurnOrder(){
-        turnOrder = createTurnOrder(player1, enemies.get(0));
+        // turnOrder = createTurnOrder(player1, enemies.get(0)); // TODO: Implement createTurnOrder 
     }
 
     public static boolean getUpdateStatus(){

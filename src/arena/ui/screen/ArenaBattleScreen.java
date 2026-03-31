@@ -2,7 +2,6 @@ package arena.ui.screen;
 
 import arena.ui.AsciiSprite;
 import arena.ui.SpriteCatalog;
-import arena.ui.model.ArenaUiCommand;
 import arena.ui.model.ArenaViewState;
 import arena.ui.model.EnemyViewState;
 import com.googlecode.lanterna.TerminalSize;
@@ -29,10 +28,18 @@ import java.util.Queue;
 import static arena.ui.UiScreenSupport.fittedLine;
 
 public class ArenaBattleScreen {
+    public interface ActionCallbacks {
+        void onBasicAttack(int targetIndex);
+        void onDefend();
+        void onUseItem(int itemIndex, int targetIndex);
+        void onSpecialSkill(int targetIndex);
+        void onBackToMenu();
+    }
+
     private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
 
     private final ArenaLayoutCalculator layoutCalculator;
-    private final Queue<ArenaUiCommand> commandQueue;
+    private ActionCallbacks callbacks;
 
     private Screen screen;
     private MultiWindowTextGUI gui;
@@ -47,7 +54,10 @@ public class ArenaBattleScreen {
 
     public ArenaBattleScreen() {
         this.layoutCalculator = new ArenaLayoutCalculator();
-        this.commandQueue = new ArrayDeque<>();
+    }
+
+    public void setCallbacks(ActionCallbacks callbacks) {
+        this.callbacks = callbacks;
     }
 
     public void initialize(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode) {
@@ -95,10 +105,6 @@ public class ArenaBattleScreen {
         gui.addWindowAndWait(window);
     }
 
-    public Optional<ArenaUiCommand> pollCommand() {
-        return Optional.ofNullable(commandQueue.poll());
-    }
-
     public void showOverlay(ArenaViewState endState) {
         if (gui == null || window == null || endState == null) {
             return;
@@ -123,12 +129,6 @@ public class ArenaBattleScreen {
 
         overlay.setComponent(panel);
         gui.addWindowAndWait(overlay);
-    }
-
-    public void enqueueCommand(ArenaUiCommand command) {
-        if (command != null) {
-            commandQueue.offer(command);
-        }
     }
 
     public void close() {
@@ -271,14 +271,28 @@ public class ArenaBattleScreen {
     }
 
     private Component buildActionBar(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
-        int actionCount = Math.max(1, state.getAvailableActions().size()) + 1;
+        int actionCount = 5; // BasicAttack, Defend, UseItem, SpecialSkill, Back
         Panel row = new Panel(new GridLayout(actionCount));
         int buttonWidth = Math.max(8, (rect.width() / actionCount) - 2);
 
-        for (String action : state.getAvailableActions()) {
-            row.addComponent(new Button(fittedLine(action, buttonWidth), () -> enqueueCommand(new ArenaUiCommand.SelectAction(action))));
-        }
-        row.addComponent(new Button("Back to Menu", this::close));
+        int targetIdx = getSelectedTargetIndex(state.getAliveEnemies().size());
+
+        row.addComponent(new Button(fittedLine("Basic Attack", buttonWidth), () -> {
+            if (callbacks != null) callbacks.onBasicAttack(targetIdx);
+        }));
+        row.addComponent(new Button(fittedLine("Defend", buttonWidth), () -> {
+            if (callbacks != null) callbacks.onDefend();
+        }));
+        row.addComponent(new Button(fittedLine("Use Item", buttonWidth), () -> {
+            if (callbacks != null) callbacks.onUseItem(0, targetIdx); // TODO: Replace 0 with selected item index
+        }));
+        row.addComponent(new Button(fittedLine("Special Skill", buttonWidth), () -> {
+            if (callbacks != null) callbacks.onSpecialSkill(targetIdx);
+        }));
+        row.addComponent(new Button("Back to Menu", () -> {
+            if (callbacks != null) callbacks.onBackToMenu();
+            close();
+        }));
         row.setPreferredSize(new TerminalSize(rect.width(), rect.height()));
         return row;
     }

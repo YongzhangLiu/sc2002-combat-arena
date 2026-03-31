@@ -36,8 +36,10 @@ import java.util.function.Consumer;
 
 import static arena.ui.UiScreenSupport.dialogSizeForScreen;
 import static arena.ui.UiScreenSupport.fittedLine;
-
-public class LanternaStartMenuApp {
+/*
+Spins up start menu and calls setup screens
+*/
+public class StartMenu {
     private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
 
     public static void main(String[] args) throws IOException {
@@ -240,12 +242,7 @@ public class LanternaStartMenuApp {
 
         if (onSetupReady != null) {
             onSetupReady.accept(setup);
-            return;
         }
-
-        ArenaBattleScreen arenaScreen = new ArenaBattleScreen();
-        arenaScreen.initialize(screen, gui, fullScreen, asciiMode);
-        arenaScreen.showAndWait(ArenaPreviewStateFactory.fromSetup(setup));
     }
 
     private static String buildSetupSummary(GameSetup setup) {

@@ -1,5 +1,9 @@
 package arena.ui.screen;
 
+// TODO (Phase 3 Phase Out): This class strictly exists so UiPreview can generate
+// a mock combat session without engine logic. This class should be deleted
+// entirely once the root Controller (GameApp) and Engine are fully mapping real GameStates to ArenaViewStates.
+
 import arena.model.combatant.Combatant;
 import arena.model.combatant.Warrior;
 import arena.model.combatant.Wizard;

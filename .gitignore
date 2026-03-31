@@ -6,4 +6,5 @@ target/
 .idea/
 *.iml
 
+src/**/*.md
 .~lock.*
