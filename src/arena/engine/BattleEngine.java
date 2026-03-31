@@ -43,11 +43,13 @@ public class BattleEngine{
                     playerAction.defend(player);
                     break;
                 case 3: //item
-                    GameState.addLog(player.getName() + " used an item!");
+                    String itemName = item != null ? item.getName() : "an unknown item";
+                    GameState.addLog(player.getName() + " used " + itemName + "!");
                     playerAction.consumeItem(player, targetEnemy, currentWave, item);
                     break;
                 case 4: //special
-                    GameState.addLog(player.getName() + " performed a special skill!");
+                    String skillName = player instanceof arena.model.combatant.Warrior ? "Shield Bash" : "Arcane Blast";
+                    GameState.addLog(player.getName() + " used " + skillName + "!");
                     playerAction.specialSkill(player, targetEnemy, currentWave);
                     break;
                 default:
@@ -95,7 +97,7 @@ public class BattleEngine{
             if (currentAttacker instanceof Enemy enemy) {
                 if (enemy.isAlive() && enemy.beginTurn()) {
                     if (enemy.getStrategy() != null) {
-                        GameState.addLog(enemy.getName() + " acted!");
+                        GameState.addLog(enemy.getName() + " performed an attack on " + player.getName() + "!");
                         List<Player> targetList = new ArrayList<>();
                         targetList.add(player);
                         enemy.getStrategy().execute(enemy, targetList);
@@ -108,7 +110,7 @@ public class BattleEngine{
             
             // Check if player died
             if (!player.isAlive()) {
-                GameState.addLog(player.getName() + " was defeated!");
+                GameState.addLog(player.getName() + " was killed by " + currentAttacker.getName() + "!");
             }
             
             // Ensure we check end conds periodically (ex: enemy killed player)
