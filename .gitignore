@@ -1,5 +1,8 @@
 target/
 *.class
+.project
+.classpath
+.settings/
 
 # IDE
 .vscode/
