@@ -14,11 +14,11 @@ import com.googlecode.lanterna.gui2.Window;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.TerminalSize;
 
-import arena.ui.DialogComposer;
+import arena.ui.util.DialogComposer;
 import arena.ui.GameSetup;
-import static arena.ui.UiScreenSupport.addSpriteLines;
-import static arena.ui.UiScreenSupport.fittedLine;
-import static arena.ui.UiScreenSupport.dialogSizeForScreen;
+import static arena.ui.util.LanternaScreenUtil.addSpriteLines;
+import static arena.ui.util.TextFormatUtil.fittedLine;
+import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
 
 public class ItemSelectionScreen {
     public static int open(

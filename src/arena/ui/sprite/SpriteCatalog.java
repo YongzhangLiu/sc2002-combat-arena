@@ -1,4 +1,4 @@
-package arena.ui;
+package arena.ui.sprite;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -1,7 +1,7 @@
 package arena.ui.screen;
 
-import arena.ui.AsciiSprite;
-import arena.ui.SpriteCatalog;
+import arena.ui.sprite.AsciiSprite;
+import arena.ui.sprite.SpriteCatalog;
 import arena.ui.model.ArenaViewState;
 import arena.ui.model.EnemyViewState;
 import com.googlecode.lanterna.TerminalSize;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 
-import static arena.ui.UiScreenSupport.fittedLine;
+import static arena.ui.util.TextFormatUtil.fittedLine;
 
 public class ArenaBattleScreen {
     public interface ActionCallbacks {
@@ -641,7 +641,7 @@ public class ArenaBattleScreen {
 
     private List<String> loadArenaBaseLine(int maxWidth, int rows) {
         try {
-            return EnemySpriteClipper.clipRight(SpriteCatalog.loadArenaStrip("forest", maxWidth).getLines(), maxWidth, rows);
+            return SpriteCatalog.loadArenaStrip("forest", maxWidth).clipRight(maxWidth, rows).getLines();
         } catch (IOException exception) {
             return List.of("_".repeat(Math.max(1, maxWidth)));
         }
@@ -652,7 +652,7 @@ public class ArenaBattleScreen {
             return List.of();
         }
         try {
-            List<String> lines = EnemySpriteClipper.clipRight(SpriteCatalog.loadCloudStrip(maxWidth).getLines(), maxWidth, rows);
+            List<String> lines = SpriteCatalog.loadCloudStrip(maxWidth).clipRight(maxWidth, rows).getLines();
             if (lines.size() >= rows) {
                 return lines;
             }
@@ -678,7 +678,7 @@ public class ArenaBattleScreen {
 
     private List<String> loadSprite(String category, String name, int maxWidth, int maxRows) {
         try {
-            return EnemySpriteClipper.clipRight(SpriteCatalog.load(category, name, "normal").getLines(), maxWidth, maxRows);
+            return SpriteCatalog.load(category, name, "normal").clipRight(maxWidth, maxRows).getLines();
         } catch (IOException exception) {
             return List.of("[" + name + "]");
         }

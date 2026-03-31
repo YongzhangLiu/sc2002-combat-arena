@@ -1,4 +1,4 @@
-package arena.ui;
+package arena.ui.util;
 
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.Component;

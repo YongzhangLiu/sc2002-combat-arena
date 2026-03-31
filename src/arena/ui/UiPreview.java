@@ -2,6 +2,7 @@ package arena.ui;
 
 import arena.ui.screen.ArenaBattleScreen;
 import arena.ui.screen.ArenaPreviewStateFactory;
+import arena.ui.screen.EndgameScreen;
 
 import java.io.IOException;
 
@@ -16,6 +17,13 @@ public final class UiPreview {
     public static void main(String[] args) throws IOException {
         System.out.println("Starting UI Preview Mode...");
         
+        // Uncomment the screen you want to test
+        previewStartMenu();
+        // previewEndgameScreen();
+    }
+
+    private static void previewStartMenu() throws IOException {
+        System.out.println("Previewing Start Menu...");
         // Boot start menu and intercept the callback
         StartMenu.launch(false, false, setup -> {
             System.out.println("Setup Completed. Previewing Battle Screen...");
@@ -25,6 +33,7 @@ public final class UiPreview {
                 // Initialize default terminal settings for the preview combat screen
                 com.googlecode.lanterna.screen.Screen screen = new com.googlecode.lanterna.terminal.DefaultTerminalFactory().createScreen();
                 screen.startScreen();
+                arena.ui.util.LanternaScreenUtil.setMouseReporting(screen, true);
                 
                 com.googlecode.lanterna.gui2.MultiWindowTextGUI gui = new com.googlecode.lanterna.gui2.MultiWindowTextGUI(
                     screen, 
@@ -40,5 +49,45 @@ public final class UiPreview {
                 e.printStackTrace();
             }
         });
+    }
+
+    private static void previewEndgameScreen() {
+        try {
+            System.out.println("Previewing Endgame Screen...");
+            com.googlecode.lanterna.screen.Screen screen = new com.googlecode.lanterna.terminal.DefaultTerminalFactory().createScreen();
+            screen.startScreen();
+            arena.ui.util.LanternaScreenUtil.setMouseReporting(screen, true);
+            
+            com.googlecode.lanterna.gui2.MultiWindowTextGUI gui = new com.googlecode.lanterna.gui2.MultiWindowTextGUI(
+                screen, 
+                new com.googlecode.lanterna.gui2.DefaultWindowManager(), 
+                new com.googlecode.lanterna.gui2.EmptySpace(com.googlecode.lanterna.TextColor.ANSI.DEFAULT)
+            );
+
+            EndgameScreen.show(
+                screen,
+                gui,
+                false, // not fullscreen for preview
+                false, // test asciiMode false
+                false, // test defeat
+                "You were killed by Goblin",
+                new EndgameScreen.EndgameCallbacks() {
+                    @Override
+                    public void onBackToMenu() {
+                        System.out.println("User clicked Back to Menu");
+                        try { screen.stopScreen(); } catch (Exception ignored) {}
+                    }
+
+                    @Override
+                    public void onQuit() {
+                        System.out.println("User clicked Quit");
+                        try { screen.stopScreen(); } catch (Exception ignored) {}
+                        System.exit(0);
+                    }
+                }
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

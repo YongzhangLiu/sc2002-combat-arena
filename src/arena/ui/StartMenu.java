@@ -1,6 +1,7 @@
 package arena.ui;
 
 import arena.ui.screen.PlayerSelectionScreen;
+import arena.ui.util.DialogComposer;
 import arena.ui.screen.ItemSelectionScreen;
 import arena.ui.screen.EnemyInformationScreen;
 import arena.ui.screen.DifficultySelectionScreen;
@@ -31,13 +32,14 @@ import com.googlecode.lanterna.terminal.MouseCaptureMode;
 import com.googlecode.lanterna.terminal.Terminal;
 
 import java.io.IOException;
+import arena.ui.util.LanternaScreenUtil;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
-import static arena.ui.UiScreenSupport.dialogSizeForScreen;
-import static arena.ui.UiScreenSupport.fittedLine;
+import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
+import static arena.ui.util.TextFormatUtil.fittedLine;
 /*
-Spins up start menu and calls setup screens
+ * Spins up start menu and calls setup screens
 */
 public class StartMenu {
     private static final TerminalSize WINDOWED_SIZE = new TerminalSize(100, 42);
@@ -66,7 +68,7 @@ public class StartMenu {
 
         Screen screen = terminalFactory.createScreen();
         screen.startScreen();
-        setMouseReporting(screen, true);
+        LanternaScreenUtil.setMouseReporting(screen, true);
 
         SessionResult result = new SessionResult(false, false);
         TerminalSize terminalSize = screen.getTerminalSize();
@@ -131,7 +133,7 @@ public class StartMenu {
 
             gui.addWindowAndWait(window);
         } finally {
-            setMouseReporting(screen, false);
+            LanternaScreenUtil.setMouseReporting(screen, false);
             screen.stopScreen();
         }
 
@@ -293,28 +295,6 @@ public class StartMenu {
                 };
             }
         });
-    }
-
-    private static void setMouseReporting(Screen screen, boolean enabled) {
-        if (!(screen instanceof TerminalScreen terminalScreen)) {
-            return;
-        }
-
-        try {
-            Terminal terminal = terminalScreen.getTerminal();
-            if (enabled && terminal instanceof ExtendedTerminal extendedTerminal) {
-                extendedTerminal.setMouseCaptureMode(MouseCaptureMode.CLICK_RELEASE_DRAG_MOVE);
-                return;
-            }
-
-            String sequence = enabled
-                ? "\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1006h\u001b[?1015h"
-                : "\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1006l\u001b[?1015l";
-            terminal.putString(sequence);
-            terminal.flush();
-        } catch (IOException exception) {
-            // Some terminals do not support this sequence; fail open for keyboard navigation.
-        }
     }
 
     private static final class UiConfig {

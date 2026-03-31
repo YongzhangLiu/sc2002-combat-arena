@@ -1,8 +1,9 @@
 package arena.ui.screen;
 
-import arena.ui.DialogComposer;
+import arena.ui.util.DialogComposer;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.gui2.BasicWindow;
+import com.googlecode.lanterna.gui2.Borders;
 import com.googlecode.lanterna.gui2.Button;
 import com.googlecode.lanterna.gui2.EmptySpace;
 import com.googlecode.lanterna.gui2.Label;
@@ -20,7 +21,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
-import static arena.ui.UiScreenSupport.dialogSizeForScreen;
+import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
 
 /**
  * Full-screen visual replacement for game-over sequences.
@@ -66,35 +67,43 @@ public class EndgameScreen {
 
         // Create actual bordered inner-box for details
         int contentWidth = Math.max(40, cols / 2);
-        Panel borderPanel = new Panel(new LinearLayout());
         
-        borderPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(contentWidth, asciiMode))));
+        Panel innerContent = new Panel(new LinearLayout());
         
-        String title = isVictory ? "ACHIEVEMENT" : "DEMISE";
-        borderPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder(title, contentWidth, asciiMode))));
-        borderPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("", contentWidth, asciiMode))));
+        String title = isVictory ? "YOU WIN!" : "YOU LOSE";
+        innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        innerContent.addComponent(DialogComposer.centered(new Label(title)));
+        innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
         
-        // Reason formatting ("You were slain by a goblin's fireball.")
+        // Reason formatting ("You were slain by goblin")
         String message = reasonMessage != null ? reasonMessage : "";
-        borderPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder(message, contentWidth, asciiMode))));
-        
-        borderPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("", contentWidth, asciiMode))));
-        borderPanel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(contentWidth, asciiMode))));
+        innerContent.addComponent(DialogComposer.centered(new Label(message)));
+        innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
-        mainPanel.addComponent(borderPanel);
-        mainPanel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-
-        mainPanel.addComponent(DialogComposer.centered(new Button("Back to Menu", () -> {
+        // Buttons fit inside the dialog box
+        innerContent.addComponent(DialogComposer.centered(new Button("Back to Menu", () -> {
             window.close();
             if (callbacks != null) callbacks.onBackToMenu();
         })));
         
-        mainPanel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
-        mainPanel.addComponent(DialogComposer.centered(new Button("Quit", () -> {
+        innerContent.addComponent(DialogComposer.centered(new Button("Quit", () -> {
             window.close();
             if (callbacks != null) callbacks.onQuit();
         })));
+        
+        innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        
+        // Ensure it maintains width
+        innerContent.setPreferredSize(new TerminalSize(contentWidth, 10));
+
+        // Use our new CustomBorder to get rounded corners (or ASCII mode fallback)
+        com.googlecode.lanterna.gui2.Border borderBox = new arena.ui.util.CustomBorder(asciiMode);
+        borderBox.setComponent(innerContent);
+        
+        // 1. Center the dialog box itself horizontally
+        mainPanel.addComponent(DialogComposer.centered(borderBox));
 
         DialogComposer.addVerticalPaddingBottom(mainPanel, rows, paddingRows);
 

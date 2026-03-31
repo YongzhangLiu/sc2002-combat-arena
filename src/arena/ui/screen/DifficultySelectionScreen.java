@@ -13,11 +13,11 @@ import com.googlecode.lanterna.gui2.Window;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.TerminalSize;
 
-import arena.ui.DialogComposer;
+import arena.ui.util.DialogComposer;
 import arena.ui.GameSetup;
-import static arena.ui.UiScreenSupport.fittedLine;
-import static arena.ui.UiScreenSupport.fittedLines;
-import static arena.ui.UiScreenSupport.dialogSizeForScreen;
+import static arena.ui.util.TextFormatUtil.fittedLine;
+import static arena.ui.util.TextFormatUtil.fittedLines;
+import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
 
 public class DifficultySelectionScreen {
     public static int open(

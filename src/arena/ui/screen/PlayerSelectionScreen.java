@@ -17,13 +17,13 @@ import com.googlecode.lanterna.TerminalSize;
 import arena.model.combatant.Combatant;
 import arena.model.combatant.Warrior;
 import arena.model.combatant.Wizard;
-import arena.ui.DialogComposer;
+import arena.ui.util.DialogComposer;
 import arena.ui.GameSetup;
-import static arena.ui.UiScreenSupport.addSpriteLines;
-import static arena.ui.UiScreenSupport.combatantStatBlock;
-import static arena.ui.UiScreenSupport.fittedLine;
-import static arena.ui.UiScreenSupport.fittedLines;
-import static arena.ui.UiScreenSupport.dialogSizeForScreen;
+import static arena.ui.util.LanternaScreenUtil.addSpriteLines;
+import static arena.ui.util.ViewMapperUtil.combatantStatBlock;
+import static arena.ui.util.TextFormatUtil.fittedLine;
+import static arena.ui.util.TextFormatUtil.fittedLines;
+import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
 
 public class PlayerSelectionScreen {
     public static int open(
