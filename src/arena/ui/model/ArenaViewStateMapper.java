@@ -12,12 +12,17 @@ import arena.model.item.Item;
 public class ArenaViewStateMapper {
 
     public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message) {
+        return fromGameState(victory, defeat, message, null);
+    }
+
+    public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message, Integer floatingDamage) {
         Player player = GameState.getPlayer();
         List<Enemy> wave = GameState.getCurrentWave();
 
         // Build Player State
         PlayerViewState playerState = null;
         if (player != null) {
+            boolean hasItems = player.getInventory() != null && !player.getInventory().isEmpty();
             playerState = new PlayerViewState(
                 player.getName(),
                 player.getClass().getSimpleName(), // e.g., "Warrior" or "Wizard"
@@ -29,7 +34,9 @@ public class ArenaViewStateMapper {
                 player.getClass().getSimpleName().toLowerCase(),
                 player.getSpecialSkillCooldown(),
                 player.canUseSpecialSkill(),
-                Collections.emptyList() // Status effects not deeply implemented yet
+                hasItems,
+                Collections.emptyList(), // Status effects not deeply implemented yet
+                floatingDamage
             );
         }
 

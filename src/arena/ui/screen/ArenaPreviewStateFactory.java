@@ -64,6 +64,7 @@ public final class ArenaPreviewStateFactory {
             playerClass.toLowerCase(),
             2,
             false,
+            true, // hasItems mock
             Collections.<StatusIconViewState>emptyList()
         );
     }

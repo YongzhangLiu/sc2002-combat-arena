@@ -10,6 +10,11 @@ import arena.model.item.Item;
 
 public class BattleEngine{
     PlayerAction playerAction = new PlayerAction();
+    private int lastPlayerDamage = 0;
+
+    public int getLastPlayerDamage() {
+        return lastPlayerDamage;
+    }
 
     public void endRound(){
         int currentRound = GameState.getCurrentRound();
@@ -95,13 +100,18 @@ public class BattleEngine{
             }
 
             // It's an Enemy. Process their AI Strategy automatically.
+            boolean enemyActed = false;
             if (currentAttacker instanceof Enemy enemy) {
                 if (enemy.isAlive() && enemy.beginTurn()) {
                     if (enemy.getStrategy() != null) {
                         GameState.addLog(enemy.getName() + " performed an attack on " + player.getName());
                         List<Player> targetList = new ArrayList<>();
                         targetList.add(player);
+                        int hpBefore = player.getHp();
                         enemy.getStrategy().execute(enemy, targetList);
+                        int hpAfter = player.getHp();
+                        lastPlayerDamage = hpBefore - hpAfter;
+                        enemyActed = true;
                     }
                 }
                 sweepDeadEnemies();
@@ -120,12 +130,17 @@ public class BattleEngine{
             }
             
             if (GameState.advanceWaveIfCleared()) {
-                return advanceTurnQueue(); // Immediately restart logic with new queue
+                return 3; // Immediately restart logic with new queue in next tick, return to let UI refresh
             }
             
             // Ensure we check end conds periodically (ex: enemy killed player)
             endCondition = GameState.checkEndCondition();
             if (endCondition != 0) return endCondition;
+
+            // Pause to let UI render the enemy's action
+            if (enemyActed) {
+                return 3;
+            }
         }
 
         // If queue is empty, the round is over.

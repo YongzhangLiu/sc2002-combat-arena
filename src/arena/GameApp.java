@@ -132,6 +132,25 @@ public class GameApp {
         if (state == 0) {
             state = engine.advanceTurnQueue();
         }
+
+        while (state == 3) {
+            // An enemy just went. Let's render the initial state (updates log).
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Enemy Action"));
+            refreshScreen();
+            
+            // try { Thread.sleep(500); } catch (InterruptedException e) {}
+
+            int dmg = engine.getLastPlayerDamage();
+            if (dmg > 0) {
+                // Render the floating damage popup
+                battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Enemy Action", dmg));
+                refreshScreen();
+                try { Thread.sleep(1000); } catch (InterruptedException e) {}
+            }
+
+            // Push next turn
+            state = engine.advanceTurnQueue();
+        }
         
         boolean isGameOver = checkEndCondition(state, true);
         if (isGameOver) {
@@ -139,6 +158,17 @@ public class GameApp {
         } else {
             // Update battle UI with new states
             battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Turn Advanced."));
+        }
+    }
+    
+    private void refreshScreen() {
+        try {
+            if (gui != null && screen != null) {
+                gui.updateScreen();
+                screen.refresh();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     

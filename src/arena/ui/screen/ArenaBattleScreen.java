@@ -254,19 +254,22 @@ public class ArenaBattleScreen {
 
         int targetIdx = getSelectedTargetIndex(state.getAliveEnemies().size());
 
-        row.addComponent(new Button(fittedLine("Basic Attack", buttonWidth), () -> {
+        row.addComponent(createSafeButton(fittedLine("Basic Attack", buttonWidth), () -> {
             if (callbacks != null) callbacks.onBasicAttack(targetIdx);
         }));
-        row.addComponent(new Button(fittedLine("Defend", buttonWidth), () -> {
+        row.addComponent(createSafeButton(fittedLine("Defend", buttonWidth), () -> {
             if (callbacks != null) callbacks.onDefend();
         }));
-        row.addComponent(new Button(fittedLine("Use Item", buttonWidth), () -> {
-            if (callbacks != null) callbacks.onUseItem(0, targetIdx); // TODO: Replace 0 with selected item index
+        
+        boolean hasItems = state.getPlayerState() != null && state.getPlayerState().hasItems();
+        String itemLabel = hasItems ? "Use Item" : "(Empty)";
+        row.addComponent(createSafeButton(fittedLine(itemLabel, buttonWidth), () -> {
+            if (hasItems && callbacks != null) callbacks.onUseItem(0, targetIdx); // TODO: Replace 0 with selected item index
         }));
         
         boolean skillAvailable = state.getPlayerState() != null && state.getPlayerState().isSpecialSkillAvailable();
         String skillLabel = skillAvailable ? "Special Skill" : "Skill (CD: " + state.getPlayerState().getSpecialSkillCooldown() + ")";
-        row.addComponent(new Button(fittedLine(skillLabel, buttonWidth), () -> {
+        row.addComponent(createSafeButton(fittedLine(skillLabel, buttonWidth), () -> {
             if (skillAvailable && callbacks != null) callbacks.onSpecialSkill(targetIdx);
         }));
         
@@ -278,6 +281,22 @@ public class ArenaBattleScreen {
         return row;
     }
 
+    // Button that ignores mouse click release events to prevent accidental double activations due to lanterna's mouse event handling
+    private Button createSafeButton(String label, Runnable action) {
+        return new Button(label, action) {
+            @Override
+            public com.googlecode.lanterna.gui2.Interactable.Result handleKeyStroke(com.googlecode.lanterna.input.KeyStroke keyStroke) {
+                if (keyStroke.getKeyType() == com.googlecode.lanterna.input.KeyType.MouseEvent) {
+                    com.googlecode.lanterna.input.MouseAction mouseEvent = (com.googlecode.lanterna.input.MouseAction) keyStroke;
+                    if (mouseEvent.getActionType() == com.googlecode.lanterna.input.MouseActionType.CLICK_RELEASE) {
+                        return com.googlecode.lanterna.gui2.Interactable.Result.HANDLED;
+                    }
+                }
+                return super.handleKeyStroke(keyStroke);
+            }
+        };
+    }
+
     private Component buildPlayerBlock(int width, int height, ArenaViewState state) {
         Panel block = new Panel(new LinearLayout(Direction.VERTICAL));
         if (state.getPlayerState() == null) {
@@ -287,11 +306,20 @@ public class ArenaBattleScreen {
         }
 
         int fixedLines = 1;
+        Integer floatingDamage = state.getPlayerState().getFloatingDamage();
+        if (floatingDamage != null) {
+            fixedLines++;
+        }
+        
         int spriteRows = Math.max(1, height - fixedLines);
         List<String> spriteLines = loadSprite("player", state.getPlayerState().getSpriteKey(), Math.max(6, width), spriteRows);
         int topPadding = Math.max(0, height - fixedLines - spriteLines.size());
         for (int i = 0; i < topPadding; i++) {
             block.addComponent(new Label(""));
+        }
+
+        if (floatingDamage != null) {
+            block.addComponent(new Label(fittedLine("  -" + floatingDamage, width)).setForegroundColor(com.googlecode.lanterna.TextColor.ANSI.RED));
         }
 
         block.addComponent(new Label(fittedLine(" " + hpLine(state.getPlayerState().getCurrentHp(), state.getPlayerState().getMaxHp(), width), width)));
