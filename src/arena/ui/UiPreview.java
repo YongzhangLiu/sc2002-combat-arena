@@ -70,7 +70,10 @@ public final class UiPreview {
                 false, // not fullscreen for preview
                 false, // test asciiMode false
                 false, // test defeat
-                "You were killed by Goblin",
+                0,     // playerHp
+                2,    // totalRounds
+                3,     // enemiesRemaining
+                "You were killed by Goblin!", // lastLogEntry
                 new EndgameScreen.EndgameCallbacks() {
                     @Override
                     public void onBackToMenu() {

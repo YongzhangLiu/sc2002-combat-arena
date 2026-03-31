@@ -33,7 +33,7 @@ public class EndgameScreen {
         void onQuit();
     }
 
-    public static void show(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode, boolean isVictory, String reasonMessage, EndgameCallbacks callbacks) {
+    public static void show(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode, boolean isVictory, int playerHp, int totalRounds, int enemiesRemaining, String lastLogEntry, EndgameCallbacks callbacks) {
         BasicWindow window = new BasicWindow();
         window.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
         
@@ -53,10 +53,11 @@ public class EndgameScreen {
         List<String> bannerLines = loadEndgameBanner(isVictory);
         int bannerHeight = bannerLines.size();
         
-        // Calculate vertical spacing mathematically
-        int paddingRows = Math.max(1, (rows - bannerHeight - 12) / 2);
+        // Let Lanterna automatically size the internal components to fit exactly what is needed
+        int assumedBoxHeight = isVictory ? 11 : 12;
+        int totalContentHeight = bannerHeight + assumedBoxHeight + 2; 
         
-        DialogComposer.addVerticalPaddingTop(mainPanel, rows, paddingRows);
+        DialogComposer.addVerticalPaddingTop(mainPanel, rows, totalContentHeight);
 
         // Sub-panel for the ascii text, centered
         for (String line : bannerLines) {
@@ -70,14 +71,20 @@ public class EndgameScreen {
         
         Panel innerContent = new Panel(new LinearLayout());
         
-        String title = isVictory ? "YOU WIN!" : "YOU LOSE";
+        String title = isVictory ? "YOU WIN" : "YOU LOSE";
         innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
         innerContent.addComponent(DialogComposer.centered(new Label(title)));
-        innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
         
-        // Reason formatting ("You were slain by goblin")
-        String message = reasonMessage != null ? reasonMessage : "";
-        innerContent.addComponent(DialogComposer.centered(new Label(message)));
+        if (isVictory) {
+            innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+            innerContent.addComponent(DialogComposer.centered(new Label("Remaining HP: " + playerHp)));
+            innerContent.addComponent(DialogComposer.centered(new Label("Total Rounds: " + totalRounds)));
+        } else {
+            innerContent.addComponent(DialogComposer.centered(new Label(lastLogEntry != null ? lastLogEntry : "You were killed.")));
+            innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+            innerContent.addComponent(DialogComposer.centered(new Label("Enemies Remaining: " + enemiesRemaining)));
+            innerContent.addComponent(DialogComposer.centered(new Label("Total Rounds Survived: " + totalRounds)));
+        }
         innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
         // Buttons fit inside the dialog box
@@ -86,8 +93,6 @@ public class EndgameScreen {
             if (callbacks != null) callbacks.onBackToMenu();
         })));
         
-        innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-
         innerContent.addComponent(DialogComposer.centered(new Button("Quit", () -> {
             window.close();
             if (callbacks != null) callbacks.onQuit();
@@ -95,8 +100,8 @@ public class EndgameScreen {
         
         innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
         
-        // Ensure it maintains width
-        innerContent.setPreferredSize(new TerminalSize(contentWidth, 10));
+        // Let Lanterna automatically size the internal components to fit exactly what is needed
+        innerContent.setPreferredSize(new TerminalSize(contentWidth, isVictory ? 9 : 10));
 
         // Use our new CustomBorder to get rounded corners (or ASCII mode fallback)
         com.googlecode.lanterna.gui2.Border borderBox = new arena.ui.util.CustomBorder(asciiMode);
@@ -105,7 +110,7 @@ public class EndgameScreen {
         // 1. Center the dialog box itself horizontally
         mainPanel.addComponent(DialogComposer.centered(borderBox));
 
-        DialogComposer.addVerticalPaddingBottom(mainPanel, rows, paddingRows);
+        DialogComposer.addVerticalPaddingBottom(mainPanel, rows, totalContentHeight);
 
         window.setComponent(mainPanel);
         gui.addWindowAndWait(window);
