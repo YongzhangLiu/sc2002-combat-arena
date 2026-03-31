@@ -48,7 +48,6 @@ public class ArenaBattleScreen {
     private boolean asciiMode;
     private ArenaViewState lastRenderedState;
     private ArenaLayoutCalculator.LayoutBounds lastLayoutBounds;
-    private boolean overlayActive;
     private TerminalSize windowedLayoutSize;
     private int uiSelectedTargetIndex;
 
@@ -65,7 +64,6 @@ public class ArenaBattleScreen {
         this.gui = gui;
         this.fullScreen = fullScreen;
         this.asciiMode = asciiMode;
-        this.overlayActive = false;
         this.windowedLayoutSize = null;
         this.uiSelectedTargetIndex = 0;
 
@@ -105,32 +103,6 @@ public class ArenaBattleScreen {
         gui.addWindowAndWait(window);
     }
 
-    public void showOverlay(ArenaViewState endState) {
-        if (gui == null || window == null || endState == null) {
-            return;
-        }
-
-        overlayActive = true;
-
-        BasicWindow overlay = new BasicWindow();
-        overlay.setHints(java.util.Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
-
-        Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
-        String title = endState.isVictory() ? "VICTORY" : "DEFEAT";
-        panel.addComponent(new Label(title));
-        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-        panel.addComponent(new Label("Rounds: " + endState.getRoundNumber()));
-        panel.addComponent(new Label(endState.getFeedbackMessage()));
-        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-        panel.addComponent(new Button("Close", () -> {
-            overlayActive = false;
-            overlay.close();
-        }));
-
-        overlay.setComponent(panel);
-        gui.addWindowAndWait(overlay);
-    }
-
     public void close() {
         if (window != null) {
             window.close();
@@ -143,10 +115,6 @@ public class ArenaBattleScreen {
 
     public ArenaViewState getLastRenderedState() {
         return lastRenderedState;
-    }
-
-    public boolean isOverlayActive() {
-        return overlayActive;
     }
 
     private Panel buildSkeletonPanel(ArenaLayoutCalculator.LayoutBounds bounds, ArenaViewState state) {
