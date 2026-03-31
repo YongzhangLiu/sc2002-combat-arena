@@ -16,9 +16,9 @@ import com.googlecode.lanterna.TerminalSize;
 
 import arena.ui.util.DialogComposer;
 import arena.ui.GameSetup;
-import static arena.ui.util.LanternaScreenUtil.addSpriteLines;
+import static arena.ui.util.ScreenUtil.addSpriteLines;
 import static arena.ui.util.TextFormatUtil.fittedLine;
-import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
+import static arena.ui.util.ScreenUtil.dialogSizeForScreen;
 
 public class ItemSelectionScreen {
     public static int open(

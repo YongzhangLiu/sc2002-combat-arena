@@ -21,7 +21,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
-import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
+import static arena.ui.util.ScreenUtil.dialogSizeForScreen;
 
 /**
  * Full-screen visual replacement for game-over sequences.

@@ -18,11 +18,11 @@ import arena.model.combatant.Combatant;
 import arena.model.combatant.Goblin;
 import arena.model.combatant.Wolf;
 import arena.ui.util.DialogComposer;
-import static arena.ui.util.LanternaScreenUtil.addSpriteLines;
+import static arena.ui.util.ScreenUtil.addSpriteLines;
 import static arena.ui.util.ViewMapperUtil.combatantStatBlock;
 import static arena.ui.util.TextFormatUtil.fittedLine;
 import static arena.ui.util.TextFormatUtil.fittedLines;
-import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
+import static arena.ui.util.ScreenUtil.dialogSizeForScreen;
 
 public class EnemyInformationScreen {
     private static final int ENEMY_SPRITE_ROWS = 6;

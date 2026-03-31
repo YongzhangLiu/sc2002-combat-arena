@@ -17,7 +17,7 @@ import arena.ui.util.DialogComposer;
 import arena.ui.GameSetup;
 import static arena.ui.util.TextFormatUtil.fittedLine;
 import static arena.ui.util.TextFormatUtil.fittedLines;
-import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
+import static arena.ui.util.ScreenUtil.dialogSizeForScreen;
 
 public class DifficultySelectionScreen {
     public static int open(

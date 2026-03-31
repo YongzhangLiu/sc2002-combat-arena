@@ -32,11 +32,11 @@ import com.googlecode.lanterna.terminal.MouseCaptureMode;
 import com.googlecode.lanterna.terminal.Terminal;
 
 import java.io.IOException;
-import arena.ui.util.LanternaScreenUtil;
+import arena.ui.util.ScreenUtil;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
-import static arena.ui.util.LanternaScreenUtil.dialogSizeForScreen;
+import static arena.ui.util.ScreenUtil.dialogSizeForScreen;
 import static arena.ui.util.TextFormatUtil.fittedLine;
 /*
  * Spins up start menu and calls setup screens
@@ -68,7 +68,7 @@ public class StartMenu {
 
         Screen screen = terminalFactory.createScreen();
         screen.startScreen();
-        LanternaScreenUtil.setMouseReporting(screen, true);
+        ScreenUtil.setMouseReporting(screen, true);
 
         SessionResult result = new SessionResult(false, false);
         TerminalSize terminalSize = screen.getTerminalSize();
@@ -133,7 +133,7 @@ public class StartMenu {
 
             gui.addWindowAndWait(window);
         } finally {
-            LanternaScreenUtil.setMouseReporting(screen, false);
+            ScreenUtil.setMouseReporting(screen, false);
             screen.stopScreen();
         }
 

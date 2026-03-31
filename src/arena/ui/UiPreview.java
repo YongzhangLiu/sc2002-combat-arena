@@ -18,8 +18,8 @@ public final class UiPreview {
         System.out.println("Starting UI Preview Mode...");
         
         // Uncomment the screen you want to test
-        previewStartMenu();
-        // previewEndgameScreen();
+        // previewStartMenu();
+        previewEndgameScreen();
     }
 
     private static void previewStartMenu() throws IOException {
@@ -33,7 +33,7 @@ public final class UiPreview {
                 // Initialize default terminal settings for the preview combat screen
                 com.googlecode.lanterna.screen.Screen screen = new com.googlecode.lanterna.terminal.DefaultTerminalFactory().createScreen();
                 screen.startScreen();
-                arena.ui.util.LanternaScreenUtil.setMouseReporting(screen, true);
+                arena.ui.util.ScreenUtil.setMouseReporting(screen, true);
                 
                 com.googlecode.lanterna.gui2.MultiWindowTextGUI gui = new com.googlecode.lanterna.gui2.MultiWindowTextGUI(
                     screen, 
@@ -56,7 +56,7 @@ public final class UiPreview {
             System.out.println("Previewing Endgame Screen...");
             com.googlecode.lanterna.screen.Screen screen = new com.googlecode.lanterna.terminal.DefaultTerminalFactory().createScreen();
             screen.startScreen();
-            arena.ui.util.LanternaScreenUtil.setMouseReporting(screen, true);
+            arena.ui.util.ScreenUtil.setMouseReporting(screen, true);
             
             com.googlecode.lanterna.gui2.MultiWindowTextGUI gui = new com.googlecode.lanterna.gui2.MultiWindowTextGUI(
                 screen, 
