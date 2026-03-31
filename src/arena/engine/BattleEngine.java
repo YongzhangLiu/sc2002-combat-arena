@@ -35,21 +35,26 @@ public class BattleEngine{
         if (player.beginTurn()) {
             switch (playerChoice) {
                 case 1: //basic attack
+                    GameState.addLog(player.getName() + " performed an attack on " + targetEnemy.getName() + "!");
                     playerAction.bAttack(player, targetEnemy);
                     break;
                 case 2: //defend
+                    GameState.addLog(player.getName() + " is defending!");
                     playerAction.defend(player);
                     break;
                 case 3: //item
+                    GameState.addLog(player.getName() + " used an item!");
                     playerAction.consumeItem(player, targetEnemy, currentWave, item);
                     break;
                 case 4: //special
+                    GameState.addLog(player.getName() + " performed a special skill!");
                     playerAction.specialSkill(player, targetEnemy, currentWave);
                     break;
                 default:
                     break;
             }
             if (!targetEnemy.isAlive()) {
+                GameState.addLog(targetEnemy.getName() + " was defeated!");
                 currentWave.remove(targetEnemy);
                 GameState.setCurrentWave(currentWave);
                 // Also remove from turn order so dead enemies don't attack
@@ -90,6 +95,7 @@ public class BattleEngine{
             if (currentAttacker instanceof Enemy enemy) {
                 if (enemy.isAlive() && enemy.beginTurn()) {
                     if (enemy.getStrategy() != null) {
+                        GameState.addLog(enemy.getName() + " acted!");
                         List<Player> targetList = new ArrayList<>();
                         targetList.add(player);
                         enemy.getStrategy().execute(enemy, targetList);
@@ -99,6 +105,11 @@ public class BattleEngine{
             
             // Pop the enemy off the queue
             turnOrder.remove(0);
+            
+            // Check if player died
+            if (!player.isAlive()) {
+                GameState.addLog(player.getName() + " was defeated!");
+            }
             
             // Ensure we check end conds periodically (ex: enemy killed player)
             endCondition = GameState.checkEndCondition();

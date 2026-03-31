@@ -1,6 +1,8 @@
 package arena.engine;
 
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 
 import arena.model.combatant.Combatant;
@@ -15,6 +17,22 @@ public class GameState {
     private static List<List<Enemy>> enemies = new ArrayList<>();
     private static List<Combatant> turnOrder = new ArrayList<Combatant>();
     private static boolean updateStatus; //flag to show that gameState has been changed
+
+    public static final int MAX_LOG_LINES = 4;
+    private static Deque<String> combatLog = new LinkedList<>();
+
+    public static void addLog(String message) {
+        if (message != null && !message.isEmpty()) {
+            combatLog.addLast(message);
+        }
+        while (combatLog.size() > MAX_LOG_LINES) {
+            combatLog.pollFirst();
+        }
+    }
+
+    public static Deque<String> getCombatLog() {
+        return combatLog;
+    }
 
     /*
     public static void gameStart(Player player, List<List<Enemy>> enemyList){     //Call when battle starts
