@@ -12,10 +12,14 @@ import arena.model.item.Item;
 public class ArenaViewStateMapper {
 
     public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message) {
-        return fromGameState(victory, defeat, message, null);
+        return fromGameState(victory, defeat, message, null, null);
     }
 
     public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message, Integer floatingDamage) {
+        return fromGameState(victory, defeat, message, floatingDamage, null);
+    }
+
+    public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message, Integer floatingDamage, List<Integer> enemyDamages) {
         Player player = GameState.getPlayer();
         List<Enemy> wave = GameState.getCurrentWave();
 
@@ -45,6 +49,11 @@ public class ArenaViewStateMapper {
         if (wave != null) {
             for (int i = 0; i < wave.size(); i++) {
                 Enemy e = wave.get(i);
+                Integer edmg = null;
+                if (enemyDamages != null && i < enemyDamages.size()) {
+                    edmg = enemyDamages.get(i);
+                    if (edmg != null && edmg <= 0) edmg = null;
+                }
                 enemyStates.add(new EnemyViewState(
                     i,
                     e.getName(),
@@ -56,7 +65,8 @@ public class ArenaViewStateMapper {
                     e.getSpeed(),
                     e.getClass().getSimpleName().toLowerCase(),
                     e.isAlive(),
-                    Collections.emptyList()
+                    Collections.emptyList(),
+                    edmg
                 ));
             }
         }

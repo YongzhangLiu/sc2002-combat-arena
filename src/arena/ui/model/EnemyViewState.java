@@ -19,12 +19,22 @@ public class EnemyViewState {
     private final String spriteKey; // identifier for sprite lookup
     private final boolean isAlive;
     private final List<StatusIconViewState> activeEffects;
+    private final Integer floatingDamage;
 
     public EnemyViewState(int targetIndex, String name, String type,
                          int currentHp, int maxHp,
                          int attack, int defense, int speed,
                          String spriteKey, boolean isAlive,
                          List<StatusIconViewState> activeEffects) {
+        this(targetIndex, name, type, currentHp, maxHp, attack, defense, speed, spriteKey, isAlive, activeEffects, null);
+    }
+
+    public EnemyViewState(int targetIndex, String name, String type,
+                         int currentHp, int maxHp,
+                         int attack, int defense, int speed,
+                         String spriteKey, boolean isAlive,
+                         List<StatusIconViewState> activeEffects,
+                         Integer floatingDamage) {
         this.targetIndex = targetIndex;
         this.name = name;
         this.type = type;
@@ -38,6 +48,7 @@ public class EnemyViewState {
         this.activeEffects = activeEffects != null
             ? Collections.unmodifiableList(activeEffects)
             : Collections.emptyList();
+        this.floatingDamage = floatingDamage;
     }
 
     public int getTargetIndex() {
@@ -82,6 +93,10 @@ public class EnemyViewState {
 
     public List<StatusIconViewState> getActiveEffects() {
         return activeEffects;
+    }
+
+    public Integer getFloatingDamage() {
+        return floatingDamage;
     }
 
     public int getHpPercent() {

@@ -17,6 +17,7 @@ import com.googlecode.lanterna.gui2.MultiWindowTextGUI;
 import com.googlecode.lanterna.gui2.Panel;
 import com.googlecode.lanterna.gui2.Window;
 import com.googlecode.lanterna.screen.Screen;
+import com.googlecode.lanterna.TextColor;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -418,8 +419,18 @@ public class ArenaBattleScreen {
         int fixedLines = hasEffects ? 3 : 2;
         List<String> spriteLines = loadEnemySpriteLines(enemy, contentWidth, spriteRows);
         int topPadding = Math.max(0, slotHeight - fixedLines - spriteLines.size());
+        
+        Integer targetDmg = enemy.getFloatingDamage();
+        boolean renderDmg = targetDmg != null;
         for (int i = 0; i < topPadding; i++) {
-            content.addComponent(new Label(""));
+            if (renderDmg && i == topPadding - 1) {
+                String dmgStr = "  -" + targetDmg;
+                Label dmgLabel = new Label(dmgStr);
+                dmgLabel.setForegroundColor(TextColor.ANSI.RED);
+                content.addComponent(dmgLabel);
+            } else {
+                content.addComponent(new Label(""));
+            }
         }
 
         content.addComponent(new Button(targetLabel, () -> onTargetSelected(index)));

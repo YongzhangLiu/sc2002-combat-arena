@@ -90,13 +90,13 @@ public class GameApp {
             @Override
             public void onBasicAttack(int targetIndex) {
                 int state = engine.executePlayerTurn(1, targetIndex, null);
-                handleTurnResult(state, battleScreen, engine);
+                handlePlayerTurn(state, battleScreen, engine);
             }
             
             @Override
             public void onDefend() {
                 int state = engine.executePlayerTurn(2, 0, null);
-                handleTurnResult(state, battleScreen, engine);
+                handlePlayerTurn(state, battleScreen, engine);
             }
             
             @Override
@@ -106,13 +106,13 @@ public class GameApp {
                     item = GameState.getPlayer().getInventory().get(itemIndex);
                 }
                 int state = engine.executePlayerTurn(3, targetIndex, item);
-                handleTurnResult(state, battleScreen, engine);
+                handlePlayerTurn(state, battleScreen, engine);
             }
             
             @Override
             public void onSpecialSkill(int targetIndex) {
                 int state = engine.executePlayerTurn(4, targetIndex, null);
-                handleTurnResult(state, battleScreen, engine);
+                handlePlayerTurn(state, battleScreen, engine);
             }
             
             @Override
@@ -125,6 +125,32 @@ public class GameApp {
         // 7. Render loops blocking wait call
         ArenaViewState viewState = arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Battle Started!");
         battleScreen.showAndWait(viewState);
+    }
+    
+    private void handlePlayerTurn(int state, ArenaBattleScreen battleScreen, BattleEngine engine) {
+        java.util.List<Integer> dmgs = engine.getLastEnemyDamages();
+        boolean hasDamage = false;
+        if (dmgs != null) {
+            for (Integer d : dmgs) {
+                if (d != null && d > 0) {
+                    hasDamage = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasDamage) {
+            // Render the floating damage popup for enemies
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Player Action", null, dmgs));
+            refreshScreen();
+            try { Thread.sleep(1000); } catch (InterruptedException e) {}
+        }
+        
+        // Clean up any enemies that died from the attack
+        engine.sweepDeadEnemies();
+        state = GameState.checkEndCondition();
+
+        handleTurnResult(state, battleScreen, engine);
     }
     
     private void handleTurnResult(int state, ArenaBattleScreen battleScreen, BattleEngine engine) {

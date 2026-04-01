@@ -12,48 +12,15 @@ SC2002 Group Assignment: Turn-Based Combat Arena
 - Output to build folder `target/`
 
 ### Build and run
-
-- Build UI-only profile:
-  - `mvn -Pui-only compile`
+> **Important Note:** JDK version was changed to 26, please run `Ctrl+Shift+P` -> Java: Clean language server workspace then `mvn clean compile exec:java`
+- Build game:
+    - `mvn compile`
+- Run game: 
+    - `mvn exec:java`
+- Build UI-only profile (legacy, for testing only):
+    - `mvn -Pui-only compile`
 - Run UI-only menu app:
-  - `mvn -Pui-only exec:java`
-- Build default project profile:
-  - `mvn compile`
-
-### Add your own profile
-
-> To test your own classes add another profile under `<profiles>` in `pom.xml`:
-
-```xml
-<profile>
-    <id>my-feature-test</id>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <includes>
-                        <include>arena/ui/MyTestApp.java</include>
-                    </includes>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <mainClass>arena.ui.MyTestApp</mainClass>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</profile>
-```
-
-Then run:
-- `mvn -Pmy-feature-test compile exec:java`
+    - `mvn -Pui-only exec:java`
 
 ## Workflow
 

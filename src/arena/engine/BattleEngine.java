@@ -11,9 +11,14 @@ import arena.model.item.Item;
 public class BattleEngine{
     PlayerAction playerAction = new PlayerAction();
     private int lastPlayerDamage = 0;
+    private List<Integer> lastEnemyDamages = new ArrayList<>();
 
     public int getLastPlayerDamage() {
         return lastPlayerDamage;
+    }
+
+    public List<Integer> getLastEnemyDamages() {
+        return lastEnemyDamages;
     }
 
     public void endRound(){
@@ -44,6 +49,11 @@ public class BattleEngine{
         Enemy targetEnemy = currentWave.get(target);
 
         if (player.beginTurn()) {
+            List<Integer> hpBefore = new ArrayList<>();
+            for (Enemy e : currentWave) {
+                hpBefore.add(e.getHp());
+            }
+
             switch (playerChoice) {
                 case 1: //basic attack
                     GameState.addLog(player.getName() + " performed an attack on " + targetEnemy.getName());
@@ -67,7 +77,14 @@ public class BattleEngine{
                 default:
                     break;
             }
-            sweepDeadEnemies();
+
+            lastEnemyDamages.clear();
+            for (int i = 0; i < currentWave.size(); i++) {
+                int damage = hpBefore.get(i) - currentWave.get(i).getHp();
+                lastEnemyDamages.add(damage);
+            }
+            
+            // Note: We used to sweepDeadEnemies here. Now we'll let GameApp do it after the animation.
         }
         
         List<Combatant> turnOrder = GameState.getTurnOrder();
@@ -151,7 +168,7 @@ public class BattleEngine{
         return advanceTurnQueue();
     }
 
-    private void sweepDeadEnemies() {
+    public void sweepDeadEnemies() {
         List<Enemy> currentWave = GameState.getCurrentWave();
         if (currentWave != null) {
             boolean removed = false;
