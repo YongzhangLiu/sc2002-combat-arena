@@ -5,5 +5,6 @@ import arena.strategy.BasicEnemyActionStrategy;
 public class Wolf extends Enemy {
     public Wolf(String name) {
         super(name, 40, 45, 5, 35, new BasicEnemyActionStrategy());
+        setDescription("An average wolf you can find in the forest.");
     }
 }

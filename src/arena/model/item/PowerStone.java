@@ -8,6 +8,7 @@ import arena.model.combatant.Player;
 public class PowerStone extends Item {
     public PowerStone() {
         super("Power Stone");
+        setDescription("Triggers your special skill immediately without using a cooldown.");
     }
 
     @Override

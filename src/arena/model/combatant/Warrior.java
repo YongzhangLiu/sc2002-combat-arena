@@ -7,6 +7,7 @@ import arena.model.effect.StunEffect;
 public class Warrior extends Player {
     public Warrior(String name) {
         super(name, 260, 40, 20, 30);
+        setDescription("Tanky and resilient fighter.");
     }
 
     @Override

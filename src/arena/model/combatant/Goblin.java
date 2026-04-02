@@ -5,5 +5,6 @@ import arena.strategy.BasicEnemyActionStrategy;
 public class Goblin extends Enemy {
     public Goblin(String name) {
         super(name, 55, 35, 15, 25, new BasicEnemyActionStrategy());
+        setDescription("A normal goblin who decided to be your enemy.");
     }
 }

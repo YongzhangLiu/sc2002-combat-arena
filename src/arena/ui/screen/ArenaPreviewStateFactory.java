@@ -41,6 +41,8 @@ public final class ArenaPreviewStateFactory {
             enemies.isEmpty() ? 0 : 0,
             List.of("BasicAttack", "Defend", "UseItem", "SpecialSkill"),
             List.of(setup.item),
+            List.of("A useful item."),
+            "A powerful special skill.",
             List.of("Battle preview loaded.", "Enemy slots scale with alive enemy count."),
             "Preview mode - input wiring next phase.",
             false,

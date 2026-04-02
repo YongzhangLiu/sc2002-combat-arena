@@ -15,6 +15,7 @@ public abstract class Combatant {
     private final int baseDefense;
     private final int speed;
     private final List<StatusEffect> activeEffects;
+    private String description = "";
 
     protected Combatant(String name, int maxHp, int attack, int defense, int speed) {
         this.name = name;
@@ -28,6 +29,14 @@ public abstract class Combatant {
 
     public String getName() {
         return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public int getHp() {

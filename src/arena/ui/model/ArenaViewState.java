@@ -18,6 +18,8 @@ public class ArenaViewState {
     private final int currentTargetIndex; // index into aliveEnemies list
     private final List<String> availableActions; // e.g., ["BasicAttack", "Defend", "UseItem"]
     private final List<String> availableItems;
+    private final List<String> availableItemDescriptions;
+    private final String specialSkillDescription;
     private final List<String> combatLog; // recent events for display
     private final String feedbackMessage; // current validation/result message
     private final boolean victory;
@@ -26,7 +28,8 @@ public class ArenaViewState {
     public ArenaViewState(int roundNumber, String turnOwnerName, boolean isPlayerTurn,
                          PlayerViewState playerState, List<EnemyViewState> aliveEnemies,
                          int currentTargetIndex, List<String> availableActions,
-                         List<String> availableItems, List<String> combatLog,
+                         List<String> availableItems, List<String> availableItemDescriptions,
+                         String specialSkillDescription, List<String> combatLog,
                          String feedbackMessage, boolean victory, boolean defeat) {
         this.roundNumber = roundNumber;
         this.turnOwnerName = turnOwnerName;
@@ -42,6 +45,10 @@ public class ArenaViewState {
         this.availableItems = availableItems != null
             ? Collections.unmodifiableList(availableItems)
             : Collections.emptyList();
+        this.availableItemDescriptions = availableItemDescriptions != null
+            ? Collections.unmodifiableList(availableItemDescriptions)
+            : Collections.emptyList();
+        this.specialSkillDescription = specialSkillDescription != null ? specialSkillDescription : "";
         this.combatLog = combatLog != null
             ? Collections.unmodifiableList(combatLog)
             : Collections.emptyList();
@@ -87,6 +94,14 @@ public class ArenaViewState {
 
     public List<String> getAvailableItems() {
         return availableItems;
+    }
+
+    public List<String> getAvailableItemDescriptions() {
+        return availableItemDescriptions;
+    }
+
+    public String getSpecialSkillDescription() {
+        return specialSkillDescription;
     }
 
     public List<String> getCombatLog() {

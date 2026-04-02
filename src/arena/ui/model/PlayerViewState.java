@@ -5,6 +5,7 @@ import java.util.List;
 
 public class PlayerViewState {
     private final String name;
+    private final String description;
     private final String type;
     private final int currentHp;
     private final int maxHp;
@@ -18,20 +19,31 @@ public class PlayerViewState {
     private final boolean hasItems;
     private final Integer floatingDamage;
 
+    // Backward compatible constructor
     public PlayerViewState(String name, String type, int currentHp, int maxHp,
                           int attack, int defense, int speed, String spriteKey,
                           int specialSkillCooldown, boolean isSpecialSkillAvailable,
                           boolean hasItems,
                           List<StatusIconViewState> activeEffects) {
-        this(name, type, currentHp, maxHp, attack, defense, speed, spriteKey, specialSkillCooldown, isSpecialSkillAvailable, hasItems, activeEffects, null);
+        this(name, "", type, currentHp, maxHp, attack, defense, speed, spriteKey, specialSkillCooldown, isSpecialSkillAvailable, hasItems, activeEffects, null);
     }
 
+    // Backward compatible constructor
     public PlayerViewState(String name, String type, int currentHp, int maxHp,
                           int attack, int defense, int speed, String spriteKey,
                           int specialSkillCooldown, boolean isSpecialSkillAvailable,
                           boolean hasItems,
                           List<StatusIconViewState> activeEffects, Integer floatingDamage) {
+        this(name, "", type, currentHp, maxHp, attack, defense, speed, spriteKey, specialSkillCooldown, isSpecialSkillAvailable, hasItems, activeEffects, floatingDamage);
+    }
+
+    public PlayerViewState(String name, String description, String type, int currentHp, int maxHp,
+                          int attack, int defense, int speed, String spriteKey,
+                          int specialSkillCooldown, boolean isSpecialSkillAvailable,
+                          boolean hasItems,
+                          List<StatusIconViewState> activeEffects, Integer floatingDamage) {
         this.name = name;
+        this.description = description != null ? description : "";
         this.type = type;
         this.currentHp = Math.max(0, currentHp);
         this.maxHp = Math.max(1, maxHp);
@@ -47,6 +59,7 @@ public class PlayerViewState {
     }
 
     public String getName() { return name; }
+    public String getDescription() { return description; }
     public String getType() { return type; }
     public int getCurrentHp() { return currentHp; }
     public int getMaxHp() { return maxHp; }

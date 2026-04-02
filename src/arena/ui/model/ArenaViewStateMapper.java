@@ -29,6 +29,7 @@ public class ArenaViewStateMapper {
             boolean hasItems = player.getInventory() != null && !player.getInventory().isEmpty();
             playerState = new PlayerViewState(
                 player.getName(),
+                player.getDescription(),
                 player.getClass().getSimpleName(), // e.g., "Warrior" or "Wizard"
                 player.getHp(),
                 player.getMaxHp(),
@@ -57,6 +58,7 @@ public class ArenaViewStateMapper {
                 enemyStates.add(new EnemyViewState(
                     i,
                     e.getName(),
+                    e.getDescription(),
                     e.getClass().getSimpleName(),
                     e.getHp(),
                     e.getMaxHp(),
@@ -80,11 +82,23 @@ public class ArenaViewStateMapper {
             availableActions.add("SpecialSkill");
         }
 
+        String specialSkillDescription = "";
+        if (player != null) {
+            if ("Warrior".equals(player.getClass().getSimpleName())) {
+                specialSkillDescription = "Shield Bash: Deals moderate damage and stunlocks the target.";
+            } else if ("Wizard".equals(player.getClass().getSimpleName())) {
+                specialSkillDescription = "Arcane Blast: Deals damage to all enemies and strengthens your spells.";
+            }
+        }
+
         // Item Options
         List<String> availableItems = new ArrayList<>();
+        List<String> availableItemDescriptions = new ArrayList<>();
         if (player != null && player.getInventory() != null) {
             for (Item item : player.getInventory()) {
                 availableItems.add(item.getName());
+                String desc = item.getDescription();
+                availableItemDescriptions.add(desc != null ? desc : "");
             }
         }
 
@@ -107,6 +121,8 @@ public class ArenaViewStateMapper {
             0, // Default target index
             availableActions,
             availableItems,
+            availableItemDescriptions,
+            specialSkillDescription,
             combatLog,
             message,
             victory,

@@ -10,6 +10,7 @@ import java.util.List;
 public class EnemyViewState {
     private final int targetIndex; // position in enemy list (0-based)
     private final String name;
+    private final String description;
     private final String type; // e.g., "Goblin", "Orc", "Dragon"
     private final int currentHp;
     private final int maxHp;
@@ -21,15 +22,26 @@ public class EnemyViewState {
     private final List<StatusIconViewState> activeEffects;
     private final Integer floatingDamage;
 
+    // Backward compatible constructor
     public EnemyViewState(int targetIndex, String name, String type,
                          int currentHp, int maxHp,
                          int attack, int defense, int speed,
                          String spriteKey, boolean isAlive,
                          List<StatusIconViewState> activeEffects) {
-        this(targetIndex, name, type, currentHp, maxHp, attack, defense, speed, spriteKey, isAlive, activeEffects, null);
+        this(targetIndex, name, "", type, currentHp, maxHp, attack, defense, speed, spriteKey, isAlive, activeEffects, null);
     }
 
+    // Backward compatible constructor
     public EnemyViewState(int targetIndex, String name, String type,
+                         int currentHp, int maxHp,
+                         int attack, int defense, int speed,
+                         String spriteKey, boolean isAlive,
+                         List<StatusIconViewState> activeEffects,
+                         Integer floatingDamage) {
+        this(targetIndex, name, "", type, currentHp, maxHp, attack, defense, speed, spriteKey, isAlive, activeEffects, floatingDamage);
+    }
+
+    public EnemyViewState(int targetIndex, String name, String description, String type,
                          int currentHp, int maxHp,
                          int attack, int defense, int speed,
                          String spriteKey, boolean isAlive,
@@ -37,6 +49,7 @@ public class EnemyViewState {
                          Integer floatingDamage) {
         this.targetIndex = targetIndex;
         this.name = name;
+        this.description = description != null ? description : "";
         this.type = type;
         this.currentHp = Math.max(0, currentHp);
         this.maxHp = Math.max(1, maxHp);
@@ -57,6 +70,10 @@ public class EnemyViewState {
 
     public String getName() {
         return name;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public String getType() {

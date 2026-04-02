@@ -51,6 +51,7 @@ public class ArenaBattleScreen {
     private ArenaLayoutCalculator.LayoutBounds lastLayoutBounds;
     private TerminalSize windowedLayoutSize;
     private int uiSelectedTargetIndex;
+    private boolean showInfoButtons = false;
 
     public ArenaBattleScreen() {
         this.layoutCalculator = new ArenaLayoutCalculator();
@@ -102,6 +103,28 @@ public class ArenaBattleScreen {
         this.lastLayoutBounds = layoutCalculator.calculate(resolveLayoutSize());
         window.setComponent(buildSkeletonPanel(lastLayoutBounds, state));
         gui.addWindowAndWait(window);
+    }
+
+    private void showInfoDialog(String title, String description, String stats) {
+        BasicWindow infoWindow = new BasicWindow();
+        infoWindow.setHints(java.util.Arrays.asList(Window.Hint.CENTERED, Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING));
+        
+        Panel p = new Panel(new LinearLayout(Direction.VERTICAL));
+        Label titleLabel = new Label(title);
+        titleLabel.setForegroundColor(TextColor.ANSI.CYAN);
+        p.addComponent(titleLabel.setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center)));
+        p.addComponent(new Label(description));
+        p.addComponent(new Label(stats));
+        Button closeBtn = new Button("Close", infoWindow::close);
+        p.addComponent(closeBtn.setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center)));
+        
+        arena.ui.util.CustomBorder customBorder = new arena.ui.util.CustomBorder(asciiMode);
+        customBorder.setComponent(p);
+        infoWindow.setComponent(customBorder);
+        
+        if (gui != null) {
+            gui.addWindowAndWait(infoWindow);
+        }
     }
 
     public void close() {
@@ -176,7 +199,39 @@ public class ArenaBattleScreen {
             body.add(padRight(left, leftWidth) + " ".repeat(spacer) + padRight(right, rightWidth));
         }
 
-        return buildUtilitySection("Inventory", rect, body, false);
+        Component base = buildUtilitySection("Inventory", rect, body, false);
+        
+        if (!showInfoButtons) {
+            return base;
+        }
+
+        com.googlecode.lanterna.gui2.Panel wrapper = new com.googlecode.lanterna.gui2.Panel(new com.googlecode.lanterna.gui2.AbsoluteLayout());
+        base.setPosition(new com.googlecode.lanterna.TerminalPosition(0, 0));
+        base.setSize(new com.googlecode.lanterna.TerminalSize(rect.width(), rect.height()));
+        wrapper.addComponent(base);
+
+        int itemRow = Math.min(bodyRows - 1, itemLines.size());
+        com.googlecode.lanterna.gui2.Button itemInfo = new com.googlecode.lanterna.gui2.Button("(ℹ)", () -> {
+            String itemName = state.getAvailableItems().isEmpty() ? "No Item" : state.getAvailableItems().get(0);
+            String itemDesc = state.getAvailableItemDescriptions() != null && !state.getAvailableItemDescriptions().isEmpty() ? state.getAvailableItemDescriptions().get(0) : "Item accessible in combat.";
+            showInfoDialog(itemName, itemDesc, "Count: " + state.getAvailableItems().size());
+        });
+        itemInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + Math.max(0, leftWidth / 2 - 2), 1 + itemRow));
+        itemInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
+        wrapper.addComponent(itemInfo);
+
+        int skillRow = Math.min(bodyRows - 1, skillLines.size());
+        com.googlecode.lanterna.gui2.Button skillInfo = new com.googlecode.lanterna.gui2.Button("(ℹ)", () -> {
+            String skillName = state.getPlayerState() != null ? state.getPlayerState().getType() + " Special" : "Special Skill";
+            String skillDesc = state.getSpecialSkillDescription() != null ? state.getSpecialSkillDescription() : "A powerful class ability.";
+            showInfoDialog(skillName, skillDesc, "Cooldown Timer: " + (state.getPlayerState() != null ? state.getPlayerState().getSpecialSkillCooldown() : 0));
+        });
+        skillInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + leftWidth + spacer + Math.max(0, rightWidth / 2 - 2), 1 + skillRow));
+        skillInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
+        wrapper.addComponent(skillInfo);
+
+        wrapper.setPreferredSize(new com.googlecode.lanterna.TerminalSize(rect.width(), rect.height()));
+        return wrapper;
     }
 
     private Component buildStatusPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
@@ -201,7 +256,7 @@ public class ArenaBattleScreen {
         source.addAll(state.getCombatLog());
         source.add(state.getFeedbackMessage());
 
-        return buildUtilitySection("Info", rect, source, true);
+        return buildUtilitySection("Logs", rect, source, true);
     }
 
     private Component buildArenaPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
@@ -249,7 +304,7 @@ public class ArenaBattleScreen {
     }
 
     private Component buildActionBar(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
-        int actionCount = 5; // BasicAttack, Defend, UseItem, SpecialSkill, Back
+        int actionCount = 6; // BasicAttack, Defend, UseItem, SpecialSkill, ShowInfo, Back
         Panel row = new Panel(new GridLayout(actionCount));
         int buttonWidth = Math.max(8, (rect.width() / actionCount) - 2);
 
@@ -272,6 +327,12 @@ public class ArenaBattleScreen {
         String skillLabel = skillAvailable ? "Special Skill" : "Skill (CD: " + state.getPlayerState().getSpecialSkillCooldown() + ")";
         row.addComponent(createSafeButton(fittedLine(skillLabel, buttonWidth), () -> {
             if (skillAvailable && callbacks != null) callbacks.onSpecialSkill(targetIdx);
+        }));
+
+        String toggleInfoLabel = showInfoButtons ? "Hide Info" : "Show Info";
+        row.addComponent(createSafeButton(fittedLine(toggleInfoLabel, buttonWidth), () -> {
+            showInfoButtons = !showInfoButtons;
+            render(lastRenderedState);
         }));
         
         row.addComponent(new Button("Back to Menu", () -> {
@@ -306,7 +367,7 @@ public class ArenaBattleScreen {
             return block;
         }
 
-        int fixedLines = 1;
+        int fixedLines = showInfoButtons ? 2 : 1;
         Integer floatingDamage = state.getPlayerState().getFloatingDamage();
         if (floatingDamage != null) {
             fixedLines++;
@@ -324,6 +385,20 @@ public class ArenaBattleScreen {
         }
 
         block.addComponent(new Label(fittedLine(" " + hpLine(state.getPlayerState().getCurrentHp(), state.getPlayerState().getMaxHp(), width), width)));
+
+        if (showInfoButtons) {
+            Button infoBtn = new Button("(ℹ)", () -> {
+                showInfoDialog(
+                    state.getPlayerState().getName() + " (" + state.getPlayerState().getType() + ")",
+                    state.getPlayerState().getDescription(),
+                    "HP: " + state.getPlayerState().getCurrentHp() + "/" + state.getPlayerState().getMaxHp() + "\n" +
+                    "Attack: " + state.getPlayerState().getAttack() + "\n" +
+                    "Defense: " + state.getPlayerState().getDefense() + "\n" +
+                    "Speed: " + state.getPlayerState().getSpeed()
+                );
+            });
+            block.addComponent(infoBtn);
+        }
 
         for (String line : spriteLines) {
             block.addComponent(new Label(fittedLine(line, width)));
@@ -417,6 +492,9 @@ public class ArenaBattleScreen {
 
         boolean hasEffects = !enemy.getActiveEffects().isEmpty();
         int fixedLines = hasEffects ? 3 : 2;
+        if (showInfoButtons) {
+            fixedLines++;
+        }
         List<String> spriteLines = loadEnemySpriteLines(enemy, contentWidth, spriteRows);
         int topPadding = Math.max(0, slotHeight - fixedLines - spriteLines.size());
         
@@ -438,6 +516,21 @@ public class ArenaBattleScreen {
             content.addComponent(new Label(fittedLine(effectLine(enemy), contentWidth)));
         }
         content.addComponent(new Label(fittedLine(hpLine(enemy.getCurrentHp(), enemy.getMaxHp(), contentWidth), contentWidth)));
+
+        if (showInfoButtons) {
+            Button infoBtn = new Button("(ℹ)", () -> {
+                showInfoDialog(
+                    enemy.getName() + " (" + enemy.getType() + ")",
+                    enemy.getDescription(),
+                    "HP: " + enemy.getCurrentHp() + "/" + enemy.getMaxHp() + "\n" +
+                    "Attack: " + enemy.getAttack() + "\n" +
+                    "Defense: " + enemy.getDefense() + "\n" +
+                    "Speed: " + enemy.getSpeed()
+                );
+            });
+            content.addComponent(infoBtn);
+        }
+
         for (String spriteLine : spriteLines) {
             content.addComponent(new Label(fittedLine(spriteLine, contentWidth)));
         }

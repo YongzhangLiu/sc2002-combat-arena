@@ -5,6 +5,7 @@ import java.util.List;
 public class Wizard extends Player {
     public Wizard(String name) {
         super(name, 200, 50, 10, 20);
+        setDescription("A mysterious spellcaster with a nice looking wand.");
     }
 
     @Override

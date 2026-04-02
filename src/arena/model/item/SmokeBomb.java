@@ -9,6 +9,7 @@ import arena.model.effect.SmokeBombEffect;
 public class SmokeBomb extends Item {
     public SmokeBomb() {
         super("Smoke Bomb");
+        setDescription("Grants 100% evasion for 2 turns.");
     }
 
     @Override

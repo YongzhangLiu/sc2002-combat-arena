@@ -10,6 +10,7 @@ public class Potion extends Item {
 
     public Potion() {
         super("Potion");
+        setDescription("Restores 100 HP.");
     }
 
     @Override
