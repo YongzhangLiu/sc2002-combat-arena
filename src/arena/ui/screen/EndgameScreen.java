@@ -14,6 +14,9 @@ import com.googlecode.lanterna.gui2.Window;
 import com.googlecode.lanterna.screen.Screen;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -118,6 +121,17 @@ public class EndgameScreen {
 
     private static List<String> loadEndgameBanner(boolean isVictory) {
         String filename = isVictory ? "win.txt" : "loss.txt";
+        String resourcePath = "assets/sprites/end/" + filename;
+
+        InputStream inputStream = EndgameScreen.class.getClassLoader().getResourceAsStream(resourcePath);
+        if (inputStream != null) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+                return reader.lines().toList();
+            } catch (IOException e) {
+                // Suppress fallback error in UI loop
+            }
+        }
+
         Path bannerPath = Paths.get("assets", "sprites", "end", filename);
         try {
             if (Files.exists(bannerPath)) {

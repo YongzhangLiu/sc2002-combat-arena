@@ -22,6 +22,19 @@ SC2002 Group Assignment: Turn-Based Combat Arena
 - Run UI-only menu app:
     - `mvn -Pui-only exec:java`
 
+### Package executable JAR
+
+- Build runnable JAR (dependencies included):
+    - `mvn clean package`
+- Generated artifact:
+    - `target/sc2002-combat-arena-0.2.0-all.jar`
+- Run packaged game:
+    - `java -jar target/sc2002-combat-arena-0.2.0-all.jar`
+
+Notes:
+- The packaged build targets Java 26, you need JDK 26.
+- Run from the project root so `assets/` relative paths resolve correctly.
+
 ## Workflow
 
 ### Class design

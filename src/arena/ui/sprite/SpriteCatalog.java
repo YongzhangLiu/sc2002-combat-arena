@@ -1,6 +1,9 @@
 package arena.ui.sprite;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,6 +13,7 @@ import java.util.List;
 
 public final class SpriteCatalog {
     private static final Path ROOT = Paths.get("assets", "sprites");
+    private static final String RESOURCE_ROOT = "assets/sprites";
 
     private SpriteCatalog() {
     }
@@ -31,14 +35,14 @@ public final class SpriteCatalog {
     }
 
     public static AsciiSprite load(String category, String name, String variant) throws IOException {
-        Path filePath = ROOT.resolve(category).resolve(name + "_" + variant + ".txt");
-        List<String> lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
+        Path relativePath = Paths.get(category, name + "_" + variant + ".txt");
+        List<String> lines = readSpriteLines(relativePath);
         return new AsciiSprite(lines);
     }
 
     public static AsciiSprite loadExact(String category, String filename) throws IOException {
-        Path filePath = ROOT.resolve(category).resolve(filename);
-        List<String> lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
+        Path relativePath = Paths.get(category, filename);
+        List<String> lines = readSpriteLines(relativePath);
         return new AsciiSprite(lines);
     }
 
@@ -73,11 +77,11 @@ public final class SpriteCatalog {
     private static List<AsciiSprite> loadArenaTiles(String name, String variant) throws IOException {
         List<AsciiSprite> tiles = new ArrayList<>();
         for (int index = 1; index <= 8; index++) {
-            Path tilePath = ROOT.resolve("arena").resolve(name + "_tile" + index + "_" + variant + ".txt");
-            if (!Files.exists(tilePath)) {
+            Path relativePath = Paths.get("arena", name + "_tile" + index + "_" + variant + ".txt");
+            List<String> lines = tryReadSpriteLines(relativePath);
+            if (lines == null) {
                 continue;
             }
-            List<String> lines = Files.readAllLines(tilePath, StandardCharsets.UTF_8);
             tiles.add(new AsciiSprite(lines));
         }
         return tiles;
@@ -114,14 +118,35 @@ public final class SpriteCatalog {
     private static List<AsciiSprite> loadTilesWithoutVariant(String category, String name) throws IOException {
         List<AsciiSprite> tiles = new ArrayList<>();
         for (int index = 1; index <= 8; index++) {
-            Path tilePath = ROOT.resolve(category).resolve(name + "_tile" + index + ".txt");
-            if (!Files.exists(tilePath)) {
+            Path relativePath = Paths.get(category, name + "_tile" + index + ".txt");
+            List<String> lines = tryReadSpriteLines(relativePath);
+            if (lines == null) {
                 continue;
             }
-            List<String> lines = Files.readAllLines(tilePath, StandardCharsets.UTF_8);
             tiles.add(new AsciiSprite(lines));
         }
         return tiles;
+    }
+
+    private static List<String> tryReadSpriteLines(Path relativePath) {
+        try {
+            return readSpriteLines(relativePath);
+        } catch (IOException ignored) {
+            return null;
+        }
+    }
+
+    private static List<String> readSpriteLines(Path relativePath) throws IOException {
+        String resourcePath = RESOURCE_ROOT + "/" + relativePath.toString().replace('\\', '/');
+        InputStream inputStream = SpriteCatalog.class.getClassLoader().getResourceAsStream(resourcePath);
+        if (inputStream != null) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+                return reader.lines().toList();
+            }
+        }
+
+        Path filePath = ROOT.resolve(relativePath);
+        return Files.readAllLines(filePath, StandardCharsets.UTF_8);
     }
 
     private static String padRight(String value, int width) {
