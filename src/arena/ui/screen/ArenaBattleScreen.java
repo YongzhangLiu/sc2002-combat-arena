@@ -211,23 +211,23 @@ public class ArenaBattleScreen {
         wrapper.addComponent(base);
 
         int itemRow = Math.min(bodyRows - 1, itemLines.size());
-        com.googlecode.lanterna.gui2.Button itemInfo = new com.googlecode.lanterna.gui2.Button("(ℹ)", () -> {
+        com.googlecode.lanterna.gui2.Button itemInfo = createInfoButton("(ℹ)", () -> {
             String itemName = state.getAvailableItems().isEmpty() ? "No Item" : state.getAvailableItems().get(0);
             String itemDesc = state.getAvailableItemDescriptions() != null && !state.getAvailableItemDescriptions().isEmpty() ? state.getAvailableItemDescriptions().get(0) : "Item accessible in combat.";
             showInfoDialog(itemName, itemDesc, "Count: " + state.getAvailableItems().size());
         });
-        itemInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + Math.max(0, leftWidth / 2 - 2), 1 + itemRow));
-        itemInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
+        itemInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + Math.max(0, leftWidth / 2 - 4), 1 + itemRow));
+        itemInfo.setSize(new com.googlecode.lanterna.TerminalSize(3, 1));
         wrapper.addComponent(itemInfo);
 
         int skillRow = Math.min(bodyRows - 1, skillLines.size());
-        com.googlecode.lanterna.gui2.Button skillInfo = new com.googlecode.lanterna.gui2.Button("(ℹ)", () -> {
+        com.googlecode.lanterna.gui2.Button skillInfo = createInfoButton("(ℹ)", () -> {
             String skillName = state.getPlayerState() != null ? state.getPlayerState().getType() + " Special" : "Special Skill";
             String skillDesc = state.getSpecialSkillDescription() != null ? state.getSpecialSkillDescription() : "A powerful class ability.";
             showInfoDialog(skillName, skillDesc, "Cooldown Timer: " + (state.getPlayerState() != null ? state.getPlayerState().getSpecialSkillCooldown() : 0));
         });
-        skillInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + leftWidth + spacer + Math.max(0, rightWidth / 2 - 2), 1 + skillRow));
-        skillInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
+        skillInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + leftWidth + spacer + Math.max(0, rightWidth / 2 - 4), 1 + skillRow));
+        skillInfo.setSize(new com.googlecode.lanterna.TerminalSize(3, 1));
         wrapper.addComponent(skillInfo);
 
         wrapper.setPreferredSize(new com.googlecode.lanterna.TerminalSize(rect.width(), rect.height()));
@@ -343,6 +343,42 @@ public class ArenaBattleScreen {
         return row;
     }
 
+    // Strip `< >` wrapping in buttons and reapply theming
+    private Button createInfoButton(String label, Runnable action) {
+        Button b = new Button(label, action);
+        com.googlecode.lanterna.graphics.Theme baseTheme = new com.googlecode.lanterna.graphics.SimpleTheme(
+            com.googlecode.lanterna.TextColor.ANSI.BLACK, 
+            com.googlecode.lanterna.TextColor.ANSI.WHITE
+        );
+        b.setTheme(new com.googlecode.lanterna.graphics.DelegatingTheme(baseTheme) {
+            @Override
+            public com.googlecode.lanterna.graphics.ThemeDefinition getDefinition(Class<?> componentClass) {
+                return new com.googlecode.lanterna.graphics.DelegatingThemeDefinition(super.getDefinition(componentClass)) {
+                    @Override
+                    public <T extends com.googlecode.lanterna.gui2.Component> com.googlecode.lanterna.gui2.ComponentRenderer<T> getRenderer(Class<T> type) {
+                        return (com.googlecode.lanterna.gui2.ComponentRenderer<T>) new com.googlecode.lanterna.gui2.Button.ButtonRenderer() {
+                            @Override
+                            public com.googlecode.lanterna.TerminalSize getPreferredSize(Button button) {
+                                return new com.googlecode.lanterna.TerminalSize(com.googlecode.lanterna.TerminalTextUtils.getColumnWidth(button.getLabel()), 1);
+                            }
+                            @Override
+                            public void drawComponent(com.googlecode.lanterna.gui2.TextGUIGraphics graphics, Button button) {
+                                graphics.applyThemeStyle(button.getThemeDefinition().getNormal());
+                                graphics.putString(0, 0, button.getLabel());
+                            }
+                            @Override
+                            public com.googlecode.lanterna.TerminalPosition getCursorLocation(Button button) {
+                                return com.googlecode.lanterna.TerminalPosition.TOP_LEFT_CORNER;
+                            }
+                        };
+                    }
+                };
+            }
+        });
+        b.setLayoutData(com.googlecode.lanterna.gui2.LinearLayout.createLayoutData(com.googlecode.lanterna.gui2.LinearLayout.Alignment.Center));
+        return b;
+    }
+
     // Button that ignores mouse click release events to prevent accidental double activations due to lanterna's mouse event handling
     private Button createSafeButton(String label, Runnable action) {
         return new Button(label, action) {
@@ -387,7 +423,7 @@ public class ArenaBattleScreen {
         block.addComponent(new Label(fittedLine(" " + hpLine(state.getPlayerState().getCurrentHp(), state.getPlayerState().getMaxHp(), width), width)));
 
         if (showInfoButtons) {
-            Button infoBtn = new Button("(ℹ)", () -> {
+            Button infoBtn = createInfoButton("(ℹ)", () -> {
                 showInfoDialog(
                     state.getPlayerState().getName() + " (" + state.getPlayerState().getType() + ")",
                     state.getPlayerState().getDescription(),
@@ -518,7 +554,7 @@ public class ArenaBattleScreen {
         content.addComponent(new Label(fittedLine(hpLine(enemy.getCurrentHp(), enemy.getMaxHp(), contentWidth), contentWidth)));
 
         if (showInfoButtons) {
-            Button infoBtn = new Button("(ℹ)", () -> {
+            Button infoBtn = createInfoButton("(ℹ)", () -> {
                 showInfoDialog(
                     enemy.getName() + " (" + enemy.getType() + ")",
                     enemy.getDescription(),
