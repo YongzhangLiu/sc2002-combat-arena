@@ -6,5 +6,5 @@ import arena.model.combatant.Enemy;
 import arena.model.combatant.Player;
 
 public interface TurnOrderStrategy {
-    List<Combatant> buildTurnOrder(Player player, List<Enemy> enemies);
+    List<Combatant> buildTurnOrder(List<Player> player, List<Enemy> enemies);
 }

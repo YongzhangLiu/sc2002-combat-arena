@@ -10,9 +10,11 @@ import arena.model.combatant.Player;
 public class SpeedBasedTurnOrder implements TurnOrderStrategy {
 
     @Override
-    public List<Combatant> buildTurnOrder(Player player, List<Enemy> enemies) {
+    public List<Combatant> buildTurnOrder(List<Player> players, List<Enemy> enemies) {
         List<Combatant> order = new ArrayList<>();
-        order.add(player); // Player always goes first!
+        for(Player player : players){
+            order.add(player); // Player always goes first!
+        }
         
         List<Combatant> enemyOrder = new ArrayList<>(enemies);
         //Sort enemies descending by speed

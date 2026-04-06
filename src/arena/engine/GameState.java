@@ -13,7 +13,7 @@ import arena.model.item.Item;
 
 public class GameState {
     private static int currentRound;
-    private static Player player1;
+    private static List<Player> players;
     private static List<List<Enemy>> enemies = new ArrayList<>();
     private static List<Combatant> turnOrder = new ArrayList<Combatant>();
     private static boolean updateStatus; //flag to show that gameState has been changed
@@ -54,8 +54,10 @@ public class GameState {
         currentRound = newRound;
     }
 
-    public static void setPlayer(Player player){
-        player1 = player;
+    public static void setPlayers(List<Player> playerList){
+        for(Player player1 : playerList){
+            players.add(player1);
+        }
     }
 
     public static void setEnemies(List<List<Enemy>> enemyList){
@@ -72,7 +74,7 @@ public class GameState {
 
     public static void newTurnOrder(){
         arena.strategy.TurnOrderStrategy strategy = new arena.strategy.SpeedBasedTurnOrder();
-        turnOrder = strategy.buildTurnOrder(player1, enemies.get(0)); 
+        turnOrder = strategy.buildTurnOrder(players, enemies.get(0)); 
     }
 
     public static boolean getUpdateStatus(){
@@ -80,7 +82,7 @@ public class GameState {
     }
 
     public static Player getPlayer(){
-        return player1;
+        return players.get(0);
     }
 
     public static int getCurrentRound(){
@@ -109,12 +111,18 @@ public class GameState {
         return turnOrder;
     }
 
-    public static int checkEndCondition(){ //if enemies are dead, returns 1
+    public static int checkEndCondition(){  //if enemies are dead, returns 1
         if (enemies == null || enemies.isEmpty() || (enemies.size() == 1 && enemies.get(0).isEmpty())) {
-            return 1;                      //if no condition fulfilled, returns 0, game continues
-        }else if (!player1.isAlive()) {
-            return 2;
-        }else return 0;
+            return 1;                       //if no condition fulfilled, returns 0, game continues
+        }
+        else{
+            for(Player player1 : players ){
+                if(!player1.isAlive()){
+                    return 2;                   //if players are dead, returns 2, game ends
+                }
+            }
+            return 0;                
+        }
     }
     
     public static boolean advanceWaveIfCleared() {

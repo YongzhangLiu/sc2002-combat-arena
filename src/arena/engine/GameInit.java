@@ -15,17 +15,17 @@ import arena.model.item.PowerStone;
 import arena.model.item.SmokeBomb;
 
 public class GameInit{
-    private Player player1;
+    private List<Player> player1 = new ArrayList<Player>();
     private List<List<Enemy>> enemies;
 
     public Player initPlayers(int choice, String name){        //choice -> 1:warrior, 2:Wizard
         
         if (choice == 1){
-            player1 = new Warrior(name);
+            player1.add(new Warrior(name));
         }else{
-            player1 = new Wizard(name);
+            player1.add(new Wizard(name));
         }
-        return player1;
+        return player1.get(player1.size()-1);
     }
 
     public void chooseItems(Player player1, int choice){        //choice -> 1:Potion,2:PowerStone,3:SmokeBomb
@@ -81,7 +81,7 @@ public class GameInit{
     }
 
     public void startGame(){
-        GameState.setPlayer(player1);
+        GameState.setPlayers(player1);
         GameState.setEnemies(enemies);
         GameState.setCurrentRound(1);
         GameState.newTurnOrder();
