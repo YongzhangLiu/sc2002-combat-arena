@@ -29,7 +29,8 @@ SC2002 Group Assignment: Turn-Based Combat Arena
 - Generated artifact:
     - `target/sc2002-combat-arena-0.2.0-all.jar`
 - Run packaged game:
-    - `java -jar target/sc2002-combat-arena-0.2.0-all.jar`
+    - **Linux/macOS**: `java -jar target/sc2002-combat-arena-0.2.0-all.jar`
+    - **Windows**: `javaw -jar target/sc2002-combat-arena-0.2.0-all.jar`
 
 Notes:
 - The packaged build targets Java 26, you need JDK 26.
