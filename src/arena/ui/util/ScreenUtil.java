@@ -64,13 +64,19 @@ public final class ScreenUtil {
                 return;
             }
 
+            // Swing terminals reject raw control characters (such as ESC) in putString().
+            String terminalClassName = terminal.getClass().getName();
+            if (terminalClassName.contains(".swing.")) {
+                return;
+            }
+
             String sequence = enabled
                 ? "\u001b[?1000h\u001b[?1002h\u001b[?1003h\u001b[?1006h\u001b[?1015h"
                 : "\u001b[?1000l\u001b[?1002l\u001b[?1003l\u001b[?1006l\u001b[?1015l";
             terminal.putString(sequence);
             terminal.flush();
-        } catch (IOException exception) {
-            // Some terminals do not support this sequence; fail open for keyboard navigation.
+        } catch (IOException | IllegalArgumentException exception) {
+            // Some backends do not support this sequence; fail open for keyboard navigation.
         }
     }
 }
