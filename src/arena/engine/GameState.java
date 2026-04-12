@@ -13,7 +13,7 @@ import arena.model.item.Item;
 
 public class GameState {
     private static int currentRound;
-    private static List<Player> players;
+    private static List<Player> players = new ArrayList<>();
     private static List<List<Enemy>> enemies = new ArrayList<>();
     private static List<Combatant> turnOrder = new ArrayList<Combatant>();
     private static boolean updateStatus; //flag to show that gameState has been changed
