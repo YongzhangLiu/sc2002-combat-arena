@@ -36,6 +36,16 @@ Notes:
 - The packaged build targets Java 26, you need JDK 26.
 - Run from the project root so `assets/` relative paths resolve correctly.
 
+#### Windows Specific Complications
+- Windows falls back to `SwingTerminalFrame`
+- No support for mouse clicking 
+- To build & run:
+    ```
+    mvn clean compile
+    mvn -q compile exec:exec -Dexec.executable="C:\Program Files\Java\jdk-26\bin\java.exe" -Dexec.args="-cp %classpath arena.GameApp" -Dexec.classpathScope=runtime
+    ```
+    (replace with your actual java executable path. Check using `mvn -version`.)
+
 ## Workflow
 
 ### Class design
@@ -83,9 +93,6 @@ src/arena/
 
 ### UML diagram
 - mermaid (via extension `Markdown Preview Mermaid Support`)
-
-> [Note]
-> I added a minimal UML diagram below (AI generated) for clarity. Actual logic is up for discussion.
 
 ```mermaid
 classDiagram
