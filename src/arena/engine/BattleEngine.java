@@ -10,6 +10,7 @@ import arena.model.item.Item;
 
 public class BattleEngine{
     PlayerAction playerAction = new PlayerAction();
+    private Player player;
     private int lastPlayerDamage = 0;
     private List<Integer> lastEnemyDamages = new ArrayList<>();
 
@@ -25,7 +26,7 @@ public class BattleEngine{
         int currentRound = GameState.getCurrentRound();
         GameState.setCurrentRound(currentRound+1);
         
-        Player player = GameState.getPlayer();
+        player = GameState.getPlayer();
         if (player != null) {
             player.decrementCooldownAfterTurn();
         }
@@ -39,7 +40,7 @@ public class BattleEngine{
      * Use advanceTurnQueue() to let enemies move after player.
      */
     public int executePlayerTurn(int playerChoice, int target, Item item){
-        Player player = GameState.getPlayer();
+        player = GameState.getPlayer();
         List<Enemy> currentWave = GameState.getCurrentWave();
         
         if (target < 0 || target >= currentWave.size()) {
@@ -106,7 +107,7 @@ public class BattleEngine{
         if (endCondition != 0) return endCondition;
 
         List<Combatant> turnOrder = GameState.getTurnOrder();
-        Player player = GameState.getPlayer();
+        player = GameState.getPlayer();
 
         while (!turnOrder.isEmpty()) {
             Combatant currentAttacker = turnOrder.get(0);

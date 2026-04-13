@@ -81,6 +81,7 @@ public class GameInit{
     }
 
     public void startGame(){
+        GameState.resetState();
         GameState.setPlayers(player1);
         GameState.setEnemies(enemies);
         GameState.setCurrentRound(1);

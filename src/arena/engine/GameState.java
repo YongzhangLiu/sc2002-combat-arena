@@ -16,10 +16,16 @@ public class GameState {
     private static List<Player> players = new ArrayList<>();
     private static List<List<Enemy>> enemies = new ArrayList<>();
     private static List<Combatant> turnOrder = new ArrayList<Combatant>();
-    private static boolean updateStatus; //flag to show that gameState has been changed
 
     public static final int MAX_LOG_LINES = 4;
     private static Deque<String> combatLog = new LinkedList<>();
+
+    public static void resetState() {
+        currentRound = 0;
+        players = new ArrayList<>();
+        enemies = new ArrayList<>();
+        turnOrder = new ArrayList<Combatant>();
+    }
 
     public static void addLog(String message) {
         if (message != null && !message.isEmpty()) {
@@ -75,10 +81,6 @@ public class GameState {
     public static void newTurnOrder(){
         arena.strategy.TurnOrderStrategy strategy = new arena.strategy.SpeedBasedTurnOrder();
         turnOrder = strategy.buildTurnOrder(players, enemies.get(0)); 
-    }
-
-    public static boolean getUpdateStatus(){
-        return updateStatus;
     }
 
     public static Player getPlayer(){
