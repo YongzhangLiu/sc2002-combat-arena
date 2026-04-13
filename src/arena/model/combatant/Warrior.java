@@ -11,7 +11,7 @@ public class Warrior extends Player {
     }
 
     @Override
-    protected void performSpecialSkill(List<Enemy> enemies, Enemy target) {
+    protected void performSpecialSkill(List<Combatant> enemies, Combatant target) {
         if (target == null || !target.isAlive()) {
             throw new IllegalArgumentException("Warrior special skill needs a living enemy target.");
         }

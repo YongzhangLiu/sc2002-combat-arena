@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import arena.model.combatant.Combatant;
-import arena.model.combatant.Enemy;
 import arena.model.combatant.Player;
 
 public class UseSpecialSkill extends Action {
@@ -18,16 +17,13 @@ public class UseSpecialSkill extends Action {
             throw new IllegalArgumentException("UseSpecialSkill can only be executed by a player.");
         }
 
-        List<Enemy> enemyList = new ArrayList<>();
+        List<Combatant> enemyList = new ArrayList<>();
         if (opponents != null) {
             for (Combatant combatant : opponents) {
-                if (combatant instanceof Enemy enemy) {
-                    enemyList.add(enemy);
-                }
+                enemyList.add(combatant);
             }
         }
 
-        Enemy enemyTarget = (target instanceof Enemy) ? (Enemy) target : null;
-        player.useSpecialSkill(enemyList, enemyTarget);
+        player.useSpecialSkill(enemyList, target);
     }
 }

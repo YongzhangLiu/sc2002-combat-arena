@@ -37,7 +37,8 @@ public class DifficultySelectionScreen {
             "Choose level:\n"
                 + "Easy: 3 enemies (3 Goblins)\n"
                 + "Medium: 4 enemies total (1 Goblin + 1 Wolf, then 2 Wolves)\n"
-                + "Hard: 5 enemies total (2 Goblins, then 1 Goblin + 2 Wolves)\n",
+                + "Hard: 5 enemies total (2 Goblins, then 1 Goblin + 2 Wolves)\n"
+                + "Custom: 1v1 — next screen: pick opponent (Warrior/Wizard/Goblin/Wolf/Random) + QTE on/off\n",
             Math.max(1, dialogSize.getRows() - 14),
             contentWidth
         );
@@ -70,6 +71,11 @@ public class DifficultySelectionScreen {
         })));
         panel.addComponent(DialogComposer.centered(new Button("Hard", () -> {
             setup.difficulty = "Hard";
+            result[0] = 1;
+            window.close();
+        })));
+        panel.addComponent(DialogComposer.centered(new Button("Custom", () -> {
+            setup.difficulty = "Custom";
             result[0] = 1;
             window.close();
         })));

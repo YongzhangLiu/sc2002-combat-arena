@@ -3,7 +3,9 @@ package arena.engine;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
+import arena.model.combatant.Combatant;
 import arena.model.combatant.Enemy;
 import arena.model.combatant.Goblin;
 import arena.model.combatant.Player;
@@ -16,7 +18,8 @@ import arena.model.item.SmokeBomb;
 
 public class GameInit{
     private List<Player> player1 = new ArrayList<Player>();
-    private List<List<Enemy>> enemies;
+    private List<List<Combatant>> enemies;
+    private final Random random = new Random();
 
     public Player initPlayers(int choice, String name){        //choice -> 1:warrior, 2:Wizard
         
@@ -45,9 +48,9 @@ public class GameInit{
         }
     }
 
-    public List<List<Enemy>> initEnemies(int difficulty){ //receive difficulty(1-3) from input
-        List<Enemy> firstEnemies = new ArrayList<>();
-        List<Enemy> backup = new ArrayList<>();
+    public List<List<Combatant>> initEnemies(int difficulty){ //receive difficulty(1-3) from input
+        List<Combatant> firstEnemies = new ArrayList<>();
+        List<Combatant> backup = new ArrayList<>();
         enemies = new ArrayList<>(Arrays.asList(firstEnemies, backup));
         
         switch (difficulty) {
@@ -78,6 +81,56 @@ public class GameInit{
             default:
                 return enemies;
         }
+    }
+
+    /**
+     * Custom duel: one opponent. Types: Random, Warrior, Wizard, Goblin, Wolf.
+     * CPU Warriors/Wizards get two random items (duplicates allowed). Goblins/Wolves do not use items.
+     */
+    public List<List<Combatant>> initCustomEnemies(String opponentType) {
+        List<Combatant> firstEnemies = new ArrayList<>();
+        List<Combatant> backup = new ArrayList<>();
+        enemies = new ArrayList<>(Arrays.asList(firstEnemies, backup));
+
+        String normalized = opponentType == null ? "Random" : opponentType.trim();
+        if (normalized.isEmpty()) {
+            normalized = "Random";
+        }
+
+        if ("Random".equalsIgnoreCase(normalized)) {
+            String[] pool = { "Warrior", "Wizard", "Goblin", "Wolf" };
+            normalized = pool[random.nextInt(pool.length)];
+        }
+
+        Combatant opponent;
+        if ("Warrior".equalsIgnoreCase(normalized)) {
+            Player cpu = new Warrior("CPU Warrior");
+            addRandomItem(cpu);
+            addRandomItem(cpu);
+            opponent = cpu;
+        } else if ("Wizard".equalsIgnoreCase(normalized)) {
+            Player cpu = new Wizard("CPU Wizard");
+            addRandomItem(cpu);
+            addRandomItem(cpu);
+            opponent = cpu;
+        } else if ("Goblin".equalsIgnoreCase(normalized)) {
+            opponent = new Goblin("CPU Goblin");
+        } else if ("Wolf".equalsIgnoreCase(normalized)) {
+            opponent = new Wolf("CPU Wolf");
+        } else {
+            Player cpu = new Warrior("CPU Warrior");
+            addRandomItem(cpu);
+            addRandomItem(cpu);
+            opponent = cpu;
+        }
+
+        firstEnemies.add(opponent);
+        return enemies;
+    }
+
+    private void addRandomItem(Player player) {
+        int itemChoice = random.nextInt(3) + 1;
+        chooseItems(player, itemChoice);
     }
 
     public void startGame(){

@@ -4,13 +4,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import arena.model.combatant.Combatant;
-import arena.model.combatant.Enemy;
 import arena.model.combatant.Player;
 
 public class SpeedBasedTurnOrder implements TurnOrderStrategy {
 
     @Override
-    public List<Combatant> buildTurnOrder(List<Player> players, List<Enemy> enemies) {
+    public List<Combatant> buildTurnOrder(List<Player> players, List<Combatant> opponents) {
         List<Combatant> order = new ArrayList<>();
         for (Player player : players) {
             if (player != null && player.isAlive()) {
@@ -18,9 +17,9 @@ public class SpeedBasedTurnOrder implements TurnOrderStrategy {
             }
         }
 
-        for (Enemy enemy : enemies) {
-            if (enemy != null && enemy.isAlive()) {
-                order.add(enemy);
+        for (Combatant opponent : opponents) {
+            if (opponent != null && opponent.isAlive()) {
+                order.add(opponent);
             }
         }
 

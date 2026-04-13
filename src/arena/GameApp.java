@@ -1,11 +1,18 @@
 package arena;
 
+import arena.ui.GameStartRequest;
 import arena.ui.StartMenu;
 import arena.ui.screen.ArenaBattleScreen;
 import arena.ui.model.ArenaViewState;
 import arena.engine.GameInit;
 import arena.engine.GameState;
 import arena.engine.BattleEngine;
+import arena.engine.mode.GameMode;
+import arena.engine.mode.GameModeFactory;
+import arena.engine.qte.CustomModeQtePolicy;
+import arena.engine.qte.NoOpQtePolicy;
+import arena.engine.qte.QtePolicy;
+import arena.engine.qte.QteResult;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.gui2.DefaultWindowManager;
@@ -14,14 +21,20 @@ import com.googlecode.lanterna.gui2.MultiWindowTextGUI;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import arena.ui.util.ScreenUtil;
+import arena.model.combatant.Combatant;
 import java.io.IOException;
+import java.util.List;
 
 public class GameApp {
     private Screen screen;
     private MultiWindowTextGUI gui;
     private arena.ui.GameSetup activeSetup;
     private arena.ui.GameSetup pendingReplaySetup;
-    
+    private GameMode activeMode;
+    private QtePolicy qtePolicy = new NoOpQtePolicy();
+    private boolean sessionFullScreen = true;
+    private boolean sessionAsciiMode = false;
+
     public GameApp() throws IOException {
         initializeTerminal();
     }
@@ -43,9 +56,7 @@ public class GameApp {
     public void run() {
         try {
             // 1. Launch Start Menu
-            StartMenu.launch(screen, gui, false, false, setup -> {
-                startGameSession(setup);
-            });
+            StartMenu.launch(screen, gui, true, false, this::startGameSession);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -53,9 +64,16 @@ public class GameApp {
         }
     }
     
-    private void startGameSession(arena.ui.GameSetup setup) {
+    private void startGameSession(GameStartRequest request) {
+        arena.ui.GameSetup setup = request.setup();
+        sessionFullScreen = request.fullScreen();
+        sessionAsciiMode = request.asciiMode();
         activeSetup = cloneSetup(setup);
         pendingReplaySetup = null;
+        activeMode = GameModeFactory.fromSetup(setup);
+        qtePolicy = activeMode.usesQte()
+            ? new CustomModeQtePolicy(screen, gui)
+            : new NoOpQtePolicy();
         GameInit init = new arena.engine.GameInit();
         
         // 1. Init Player Class
@@ -66,11 +84,8 @@ public class GameApp {
         applySelectedItem(init, player, setup.itemSlot1);
         applySelectedItem(init, player, setup.itemSlot2);
         
-        // 3. Init Enemies
-        int diffChoice = 1;
-        if ("Medium".equalsIgnoreCase(setup.difficulty)) diffChoice = 2;
-        else if ("Hard".equalsIgnoreCase(setup.difficulty)) diffChoice = 3;
-        init.initEnemies(diffChoice);
+        // 3. Init Enemies by selected mode
+        activeMode.initializeEnemies(init, setup);
         
         // 4. Start Game State
         init.startGame();
@@ -79,13 +94,14 @@ public class GameApp {
         BattleEngine engine = new BattleEngine();
 
         ArenaBattleScreen battleScreen = new ArenaBattleScreen();
-        battleScreen.initialize(screen, gui, false, false);
+        battleScreen.initialize(screen, gui, sessionFullScreen, sessionAsciiMode);
         
         // 6. Set Callbacks for Turn Resolution
         battleScreen.setCallbacks(new ArenaBattleScreen.ActionCallbacks() {
             @Override
             public void onBasicAttack(int targetIndex) {
-                int state = engine.executePlayerTurn(1, targetIndex, null);
+                QteResult qte = qtePolicy.resolveAttackQte();
+                int state = engine.executePlayerTurn(1, targetIndex, null, qte.multiplier());
                 handlePlayerTurn(state, battleScreen, engine);
             }
             
@@ -125,7 +141,7 @@ public class GameApp {
         if (pendingReplaySetup != null) {
             arena.ui.GameSetup replaySetup = pendingReplaySetup;
             pendingReplaySetup = null;
-            startGameSession(replaySetup);
+            startGameSession(new GameStartRequest(replaySetup, sessionFullScreen, sessionAsciiMode));
         }
     }
     
@@ -137,9 +153,19 @@ public class GameApp {
             }
             Integer playerDamage = frame.getPlayerDamage();
             java.util.List<Integer> enemyDamages = frame.getEnemyDamages();
-            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, frame.getMessage(), playerDamage, enemyDamages));
+            Integer snapshotPlayerHp = frame.getSnapshotPlayerHp();
+            java.util.Map<arena.model.combatant.Combatant, Integer> snapshotEnemyHps = frame.getSnapshotEnemyHps();
+
+            int playerOffset = (playerDamage != null && playerDamage > 0) ? -1 : 0;
+            int[] enemyOffsets = buildEnemyDamageOffsets(enemyDamages);
+            battleScreen.setDamageOffsets(playerOffset, enemyOffsets);
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, frame.getMessage(), playerDamage, enemyDamages, snapshotPlayerHp, snapshotEnemyHps));
             refreshScreen();
-            try { Thread.sleep(850); } catch (InterruptedException e) {}
+            try { Thread.sleep(230); } catch (InterruptedException e) {}
+            battleScreen.setDamageOffsets(0, null);
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, frame.getMessage(), playerDamage, enemyDamages, snapshotPlayerHp, snapshotEnemyHps));
+            refreshScreen();
+            try { Thread.sleep(620); } catch (InterruptedException e) {}
         }
 
         boolean isGameOver = checkEndCondition(state, true);
@@ -161,7 +187,21 @@ public class GameApp {
             e.printStackTrace();
         }
     }
-    
+
+    private int[] buildEnemyDamageOffsets(List<Integer> enemyDamages) {
+        List<Combatant> wave = GameState.getCurrentWave();
+        int n = wave != null ? wave.size() : 0;
+        int[] offsets = new int[n];
+        if (enemyDamages == null || n == 0) {
+            return offsets;
+        }
+        for (int i = 0; i < n && i < enemyDamages.size(); i++) {
+            Integer d = enemyDamages.get(i);
+            offsets[i] = (d != null && d > 0) ? 1 : 0;
+        }
+        return offsets;
+    }
+
     private boolean checkEndCondition(int state, boolean triggerEndgameScreen) {
         boolean victory = (state == 1);
         boolean defeat = (state == 2);
@@ -179,7 +219,7 @@ public class GameApp {
             int totalRounds = GameState.getCurrentRound();
             int enemiesRemaining = GameState.getCurrentWave() != null ? GameState.getCurrentWave().size() : 0;
             
-            arena.ui.screen.EndgameScreen.show(screen, gui, false, false, victory, hp, totalRounds, enemiesRemaining, lastLog, new arena.ui.screen.EndgameScreen.EndgameCallbacks() {
+            arena.ui.screen.EndgameScreen.show(screen, gui, sessionFullScreen, sessionAsciiMode, victory, hp, totalRounds, enemiesRemaining, lastLog, new arena.ui.screen.EndgameScreen.EndgameCallbacks() {
                 @Override
                 public void onReplaySameSettings() {
                     GameState.clearLog();
@@ -235,6 +275,8 @@ public class GameApp {
         if (source != null) {
             clone.itemSlot1 = source.itemSlot1;
             clone.itemSlot2 = source.itemSlot2;
+            clone.customOpponentType = source.customOpponentType;
+            clone.customQteEnabled = source.customQteEnabled;
         }
         return clone;
     }

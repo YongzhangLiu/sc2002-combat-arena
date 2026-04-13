@@ -3,35 +3,43 @@ package arena.ui.model;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import arena.engine.GameState;
-import arena.model.combatant.Enemy;
+import arena.model.combatant.Combatant;
 import arena.model.combatant.Player;
 import arena.model.item.Item;
 
 public class ArenaViewStateMapper {
 
     public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message) {
-        return fromGameState(victory, defeat, message, null, null);
+        return fromGameState(victory, defeat, message, null, null, null, null);
     }
 
     public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message, Integer floatingDamage) {
-        return fromGameState(victory, defeat, message, floatingDamage, null);
+        return fromGameState(victory, defeat, message, floatingDamage, null, null, null);
     }
 
     public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message, Integer floatingDamage, List<Integer> enemyDamages) {
+        return fromGameState(victory, defeat, message, floatingDamage, enemyDamages, null, null);
+    }
+
+    public static ArenaViewState fromGameState(boolean victory, boolean defeat, String message,
+                                               Integer floatingDamage, List<Integer> enemyDamages,
+                                               Integer overridePlayerHp, Map<Combatant, Integer> overrideEnemyHps) {
         Player player = GameState.getPlayer();
-        List<Enemy> wave = GameState.getCurrentWave();
+        List<Combatant> wave = GameState.getCurrentWave();
 
         // Build Player State
         PlayerViewState playerState = null;
         if (player != null) {
+            int displayHp = overridePlayerHp != null ? overridePlayerHp : player.getHp();
             boolean hasItems = player.getInventory() != null && !player.getInventory().isEmpty();
             playerState = new PlayerViewState(
                 player.getName(),
                 player.getDescription(),
-                player.getClass().getSimpleName(), // e.g., "Warrior" or "Wizard"
-                player.getHp(),
+                player.getClass().getSimpleName(),
+                displayHp,
                 player.getMaxHp(),
                 player.getAttack(),
                 player.getDefense(),
@@ -40,7 +48,7 @@ public class ArenaViewStateMapper {
                 player.getSpecialSkillCooldown(),
                 player.canUseSpecialSkill(),
                 hasItems,
-                Collections.emptyList(), // Status effects not deeply implemented yet
+                Collections.emptyList(),
                 floatingDamage
             );
         }
@@ -49,7 +57,9 @@ public class ArenaViewStateMapper {
         List<EnemyViewState> enemyStates = new ArrayList<>();
         if (wave != null) {
             for (int i = 0; i < wave.size(); i++) {
-                Enemy e = wave.get(i);
+                Combatant e = wave.get(i);
+                int displayHp = (overrideEnemyHps != null && overrideEnemyHps.containsKey(e))
+                    ? overrideEnemyHps.get(e) : e.getHp();
                 Integer edmg = null;
                 if (enemyDamages != null && i < enemyDamages.size()) {
                     edmg = enemyDamages.get(i);
@@ -60,7 +70,7 @@ public class ArenaViewStateMapper {
                     e.getName(),
                     e.getDescription(),
                     e.getClass().getSimpleName(),
-                    e.getHp(),
+                    displayHp,
                     e.getMaxHp(),
                     e.getAttack(),
                     e.getDefense(),

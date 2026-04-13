@@ -5,6 +5,7 @@ import arena.ui.util.DialogComposer;
 import arena.ui.screen.ItemSelectionScreen;
 import arena.ui.screen.EnemyInformationScreen;
 import arena.ui.screen.DifficultySelectionScreen;
+import arena.ui.screen.CustomModeSetupScreen;
 import arena.ui.screen.ArenaBattleScreen;
 import arena.ui.screen.ArenaPreviewStateFactory;
 import arena.ui.sprite.AsciiSprite;
@@ -47,17 +48,17 @@ public class StartMenu {
     private static final TerminalSize WINDOWED_SIZE = new TerminalSize(120, 42);
 
     public static void main(String[] args) throws IOException {
-        UiConfig config = new UiConfig(false, false);
+        UiConfig config = new UiConfig(true, false);
         applyArgs(args, config);
 
         launch(config.fullScreen, config.asciiMode, null);
     }
 
-    public static void launch(boolean fullScreen, boolean asciiMode, Consumer<GameSetup> onSetupReady) throws IOException {
+    public static void launch(boolean fullScreen, boolean asciiMode, Consumer<GameStartRequest> onSetupReady) throws IOException {
         launch(null, null, fullScreen, asciiMode, onSetupReady);
     }
 
-    public static void launch(Screen sharedScreen, MultiWindowTextGUI sharedGui, boolean fullScreen, boolean asciiMode, Consumer<GameSetup> onSetupReady) throws IOException {
+    public static void launch(Screen sharedScreen, MultiWindowTextGUI sharedGui, boolean fullScreen, boolean asciiMode, Consumer<GameStartRequest> onSetupReady) throws IOException {
         UiConfig config = new UiConfig(fullScreen, asciiMode);
 
         boolean keepRunning = true;
@@ -87,7 +88,7 @@ public class StartMenu {
         return gui;
     }
 
-    private static boolean runSession(Screen sharedScreen, MultiWindowTextGUI sharedGui, UiConfig config, Consumer<GameSetup> onSetupReady) throws IOException {
+    private static boolean runSession(Screen sharedScreen, MultiWindowTextGUI sharedGui, UiConfig config, Consumer<GameStartRequest> onSetupReady) throws IOException {
         final Screen screen = sharedScreen != null ? sharedScreen : createLocalScreen(config);
         final MultiWindowTextGUI gui = sharedGui != null ? sharedGui : createLocalGui(screen);
         boolean ownsTerminal = false; // Always assume shared terminal in master flow
@@ -268,15 +269,41 @@ public class StartMenu {
         return backdrop;
     }
 
-    static void startNewGameFlow(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode, Consumer<GameSetup> onSetupReady) {
+    static void startNewGameFlow(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode, Consumer<GameStartRequest> onSetupReady) {
         GameSetup setup = new GameSetup("Warrior", "Easy");
 
-        int currentScreen = 0; // 0: player, 1: item, 2: enemy, 3: difficulty
-        while (currentScreen >= 0 && currentScreen < 4) {
+        int currentScreen = 0; // 0: player, 1: item, 2: enemy, 3: difficulty, 4: custom duel options
+        while (currentScreen >= 0 && currentScreen < 5) {
+            if (currentScreen == 4) {
+                int customResult = CustomModeSetupScreen.open(screen, gui, fullScreen, asciiMode, setup);
+                if (customResult == -1) {
+                    currentScreen = 3;
+                } else if (customResult == 1) {
+                    currentScreen = 5;
+                } else {
+                    return;
+                }
+                continue;
+            }
+            if (currentScreen == 3) {
+                int diffResult = DifficultySelectionScreen.open(screen, gui, fullScreen, asciiMode, setup);
+                if (diffResult == -1) {
+                    currentScreen--;
+                } else if (diffResult == 1) {
+                    if ("Custom".equalsIgnoreCase(setup.difficulty)) {
+                        currentScreen = 4;
+                    } else {
+                        currentScreen = 5;
+                    }
+                } else {
+                    return;
+                }
+                continue;
+            }
+
             int result = currentScreen == 0 ? PlayerSelectionScreen.open(screen, gui, fullScreen, asciiMode, setup)
                        : currentScreen == 1 ? ItemSelectionScreen.open(screen, gui, fullScreen, asciiMode, setup)
-                       : currentScreen == 2 ? EnemyInformationScreen.open(screen, gui, fullScreen, asciiMode)
-                       : DifficultySelectionScreen.open(screen, gui, fullScreen, asciiMode, setup);
+                       : EnemyInformationScreen.open(screen, gui, fullScreen, asciiMode);
 
             if (result == -1) {
                 currentScreen--;
@@ -288,7 +315,7 @@ public class StartMenu {
         }
 
         if (onSetupReady != null) {
-            onSetupReady.accept(setup);
+            onSetupReady.accept(new GameStartRequest(setup, fullScreen, asciiMode));
         }
     }
 
@@ -304,6 +331,9 @@ public class StartMenu {
         for (String arg : args) {
             if ("--fullscreen".equals(arg)) {
                 config.fullScreen = true;
+            }
+            if ("--windowed".equals(arg) || "--no-fullscreen".equals(arg)) {
+                config.fullScreen = false;
             }
             if ("--ascii".equals(arg)) {
                 config.asciiMode = true;

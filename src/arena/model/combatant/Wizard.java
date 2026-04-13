@@ -9,12 +9,12 @@ public class Wizard extends Player {
     }
 
     @Override
-    protected void performSpecialSkill(List<Enemy> enemies, Enemy target) {
+    protected void performSpecialSkill(List<Combatant> enemies, Combatant target) {
         if (enemies == null) {
             throw new IllegalArgumentException("Enemy list cannot be null.");
         }
 
-        for (Enemy enemy : enemies) {
+        for (Combatant enemy : enemies) {
             if (enemy == null || !enemy.isAlive()) {
                 continue;
             }

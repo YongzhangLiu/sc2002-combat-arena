@@ -2,7 +2,7 @@ package arena.model.item;
 
 import java.util.List;
 
-import arena.model.combatant.Enemy;
+import arena.model.combatant.Combatant;
 import arena.model.combatant.Player;
 
 public class Potion extends Item {
@@ -14,7 +14,7 @@ public class Potion extends Item {
     }
 
     @Override
-    public void use(Player user, List<Enemy> enemies, Enemy target) {
+    public void use(Player user, List<Combatant> enemies, Combatant target) {
         user.heal(HEAL_AMOUNT);
     }
 }

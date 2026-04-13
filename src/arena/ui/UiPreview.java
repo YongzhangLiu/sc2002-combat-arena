@@ -36,16 +36,16 @@ public final class UiPreview {
         );
 
         // Boot start menu and intercept the callback
-        StartMenu.launch(sharedScreen, sharedGui, false, false, setup -> {
+        StartMenu.launch(sharedScreen, sharedGui, true, false, req -> {
             // System.out.println("Setup Completed. Previewing Battle Screen...");
             
             try {
                 ArenaBattleScreen arenaScreen = new ArenaBattleScreen();
                 
-                arenaScreen.initialize(sharedScreen, sharedGui, false, false);
+                arenaScreen.initialize(sharedScreen, sharedGui, req.fullScreen(), req.asciiMode());
                 
                 // Mount mock data
-                arenaScreen.showAndWait(ArenaPreviewStateFactory.fromSetup(setup));
+                arenaScreen.showAndWait(ArenaPreviewStateFactory.fromSetup(req.setup()));
             } catch (Exception e) {
                 e.printStackTrace();
             }

@@ -26,7 +26,7 @@ public abstract class Player extends Combatant {
         return specialSkillCooldown == 0;
     }
 
-    public void useSpecialSkill(List<Enemy> enemies, Enemy target) {
+    public void useSpecialSkill(List<Combatant> enemies, Combatant target) {
         if (!canUseSpecialSkill()) {
             throw new IllegalStateException("Special skill is on cooldown.");
         }
@@ -34,7 +34,7 @@ public abstract class Player extends Combatant {
         specialSkillCooldown = SPECIAL_SKILL_COOLDOWN;
     }
 
-    public void triggerSpecialSkillWithoutCooldown(List<Enemy> enemies, Enemy target) {
+    public void triggerSpecialSkillWithoutCooldown(List<Combatant> enemies, Combatant target) {
         performSpecialSkill(enemies, target);
     }
 
@@ -44,7 +44,7 @@ public abstract class Player extends Combatant {
         }
     }
 
-    protected abstract void performSpecialSkill(List<Enemy> enemies, Enemy target);
+    protected abstract void performSpecialSkill(List<Combatant> enemies, Combatant target);
 
     public void addItem(Item item) {
         if (item != null) {

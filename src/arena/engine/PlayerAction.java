@@ -8,16 +8,17 @@ import arena.model.action.BasicAttack;
 import arena.model.action.Defend;
 import arena.model.action.UseItem;
 import arena.model.action.UseSpecialSkill;
+import arena.model.combatant.Combatant;
 import arena.model.combatant.Enemy;
 import arena.model.combatant.Goblin;
 import arena.model.combatant.Player;
 import arena.model.item.Item;
 
 public class PlayerAction {
-    private List<Enemy> tempList = new ArrayList<>();
+    private List<Combatant> tempList = new ArrayList<>();
     private Enemy tempEnemy = new Goblin(null);    
 
-    public void bAttack(Player player1, Enemy target){
+    public void bAttack(Player player1, Combatant target){
         Action bAttack = new BasicAttack();
         bAttack.execute(player1, target, tempList);
     }
@@ -26,12 +27,12 @@ public class PlayerAction {
         defence.execute(player1, tempEnemy, tempList);
     }
 
-    public void specialSkill(Player player1, Enemy target, List<Enemy> enemies){
+    public void specialSkill(Player player1, Combatant target, List<Combatant> enemies){
         Action specialSkill = new UseSpecialSkill();
         specialSkill.execute(player1, target, enemies);
     }
 
-    public void consumeItem(Player player1, Enemy target, List<Enemy> enemies, Item item){
+    public void consumeItem(Player player1, Combatant target, List<Combatant> enemies, Item item){
         Action consumeItem = new UseItem(item);
         consumeItem.execute(player1, target, enemies);
     }

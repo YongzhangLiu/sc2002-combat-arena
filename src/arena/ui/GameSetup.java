@@ -5,6 +5,10 @@ public class GameSetup {
     public String itemSlot1;
     public String itemSlot2;
     public String difficulty;
+    /** Custom mode: Warrior, Wizard, Goblin, Wolf, or Random */
+    public String customOpponentType = "Random";
+    /** Custom mode: attack QTE (timing bar) when true */
+    public boolean customQteEnabled = true;
 
     public GameSetup(String playerClass, String difficulty) {
         this.playerClass = playerClass;

@@ -6,15 +6,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 import arena.model.combatant.Combatant;
-import arena.model.combatant.Enemy;
 import arena.model.combatant.Player;
-import arena.model.item.Item;
 
 
 public class GameState {
     private static int currentRound;
     private static List<Player> players = new ArrayList<>();
-    private static List<List<Enemy>> enemies = new ArrayList<>();
+    private static List<List<Combatant>> enemies = new ArrayList<>();
     private static List<Combatant> turnOrder = new ArrayList<Combatant>();
 
     public static final int MAX_LOG_LINES = 4;
@@ -66,11 +64,11 @@ public class GameState {
         }
     }
 
-    public static void setEnemies(List<List<Enemy>> enemyList){
+    public static void setEnemies(List<List<Combatant>> enemyList){
         enemies = enemyList;
     }
 
-    public static void setCurrentWave(List<Enemy> waveList){
+    public static void setCurrentWave(List<Combatant> waveList){
         enemies.set(0, waveList);
     }
 
@@ -95,14 +93,14 @@ public class GameState {
         return turnOrder.get(0);
     }
 
-    public static int getEnemyCount(List<List<Enemy>> enemies){
+    public static int getEnemyCount(List<List<Combatant>> enemies){
         if (enemies == null || enemies.isEmpty()) {
             return 0;
         }
         return enemies.get(0).size();
     }
 
-    public static List<Enemy> getCurrentWave(){
+    public static List<Combatant> getCurrentWave(){
         if (enemies == null || enemies.isEmpty()) {
             return new ArrayList<>();
         }

@@ -52,6 +52,8 @@ public class ArenaBattleScreen {
     private TerminalSize windowedLayoutSize;
     private int uiSelectedTargetIndex;
     private boolean showInfoButtons = false;
+    private int playerDamageOffset = 0;
+    private int[] enemyDamageOffsets = new int[0];
 
     public ArenaBattleScreen() {
         this.layoutCalculator = new ArenaLayoutCalculator();
@@ -130,6 +132,18 @@ public class ArenaBattleScreen {
     public void close() {
         if (window != null) {
             window.close();
+        }
+    }
+
+    /**
+     * @param enemyPerSlot horizontal nudge per enemy slot index (0 = no nudge); null clears all
+     */
+    public void setDamageOffsets(int playerOffset, int[] enemyPerSlot) {
+        this.playerDamageOffset = playerOffset;
+        if (enemyPerSlot == null || enemyPerSlot.length == 0) {
+            this.enemyDamageOffsets = new int[0];
+        } else {
+            this.enemyDamageOffsets = enemyPerSlot.clone();
         }
     }
 
@@ -429,6 +443,7 @@ public class ArenaBattleScreen {
         
         int spriteRows = Math.max(1, height - fixedLines);
         List<String> spriteLines = loadSprite("player", state.getPlayerState().getSpriteKey(), Math.max(6, width), spriteRows);
+        spriteLines = applyHorizontalOffset(spriteLines, playerDamageOffset, width);
         int topPadding = Math.max(0, height - fixedLines - spriteLines.size());
         for (int i = 0; i < topPadding; i++) {
             block.addComponent(new Label(""));
@@ -510,7 +525,8 @@ public class ArenaBattleScreen {
         int selectedIndex = getSelectedTargetIndex(state.getAliveEnemies().size());
         for (int index = 0; index < state.getAliveEnemies().size(); index++) {
             EnemyViewState enemy = state.getAliveEnemies().get(index);
-            enemyRow.addComponent(buildEnemySlot(enemy, index, selectedIndex, slotWidth, height, spriteRows));
+            int slotNudge = enemyNudgeForIndex(index);
+            enemyRow.addComponent(buildEnemySlot(enemy, index, selectedIndex, slotWidth, height, spriteRows, slotNudge));
             if (index < state.getAliveEnemies().size() - 1 && spacing > 0) {
                 enemyRow.addComponent(new EmptySpace(new TerminalSize(spacing, 1)));
             }
@@ -524,7 +540,7 @@ public class ArenaBattleScreen {
         int maxWidth = 10;
         for (EnemyViewState enemy : state.getAliveEnemies()) {
             try {
-                AsciiSprite sprite = SpriteCatalog.load("enemy", enemy.getSpriteKey(), "normal");
+                AsciiSprite sprite = resolveEnemyViewSprite(enemy);
                 maxWidth = Math.max(maxWidth, sprite.getWidth());
             } catch (IOException ignored) {
                 maxWidth = Math.max(maxWidth, fallbackEnemyLabel(enemy).length());
@@ -533,7 +549,14 @@ public class ArenaBattleScreen {
         return maxWidth;
     }
 
-    private Component buildEnemySlot(EnemyViewState enemy, int index, int selectedIndex, int slotWidth, int slotHeight, int spriteRows) {
+    private int enemyNudgeForIndex(int index) {
+        if (enemyDamageOffsets == null || index < 0 || index >= enemyDamageOffsets.length) {
+            return 0;
+        }
+        return enemyDamageOffsets[index];
+    }
+
+    private Component buildEnemySlot(EnemyViewState enemy, int index, int selectedIndex, int slotWidth, int slotHeight, int spriteRows, int horizontalNudge) {
         int contentWidth = Math.max(5, slotWidth - 1);
         Panel content = new Panel(new LinearLayout(Direction.VERTICAL));
 
@@ -550,6 +573,7 @@ public class ArenaBattleScreen {
             fixedLines++;
         }
         List<String> spriteLines = loadEnemySpriteLines(enemy, contentWidth, spriteRows);
+        spriteLines = applyHorizontalOffset(spriteLines, horizontalNudge, contentWidth);
         int topPadding = Math.max(0, slotHeight - fixedLines - spriteLines.size());
         
         Integer targetDmg = enemy.getFloatingDamage();
@@ -625,18 +649,59 @@ public class ArenaBattleScreen {
         return uiSelectedTargetIndex;
     }
 
+    /**
+     * Enemy slot sprites: normal enemies from {@code enemy/}; CPU Warrior/Wizard use mirrored {@code *_enemy_normal.txt}.
+     */
+    private AsciiSprite resolveEnemyViewSprite(EnemyViewState enemy) throws IOException {
+        try {
+            return SpriteCatalog.load("enemy", enemy.getSpriteKey(), "normal");
+        } catch (IOException first) {
+            String sk = enemy.getSpriteKey();
+            if (sk != null && ("warrior".equalsIgnoreCase(sk) || "wizard".equalsIgnoreCase(sk))) {
+                try {
+                    return SpriteCatalog.load("player", sk.toLowerCase() + "_enemy", "normal");
+                } catch (IOException ignored) {
+                    return SpriteCatalog.load("player", sk.toLowerCase(), "normal");
+                }
+            }
+            throw first;
+        }
+    }
+
     private List<String> loadEnemySpriteLines(EnemyViewState enemy, int maxWidth, int maxRows) {
         try {
-            AsciiSprite sprite = SpriteCatalog.load("enemy", enemy.getSpriteKey(), "normal");
+            AsciiSprite sprite = resolveEnemyViewSprite(enemy);
             if (sprite.getWidth() > maxWidth) {
                 return List.of(fallbackEnemyLabel(enemy));
             }
             List<String> lines = sprite.getLines();
             int rows = Math.min(maxRows, lines.size());
             return lines.subList(0, rows);
-        } catch (IOException exception) {
+        } catch (IOException ignored) {
             return List.of(fallbackEnemyLabel(enemy));
         }
+    }
+
+    private List<String> applyHorizontalOffset(List<String> lines, int offset, int width) {
+        if (lines == null || lines.isEmpty() || offset == 0) {
+            return lines;
+        }
+        List<String> shifted = new ArrayList<>();
+        for (String line : lines) {
+            shifted.add(shiftLine(line, offset, width));
+        }
+        return shifted;
+    }
+
+    private String shiftLine(String line, int offset, int width) {
+        String value = line == null ? "" : line;
+        if (offset > 0) {
+            String shifted = " ".repeat(offset) + value;
+            return shifted.length() > width ? shifted.substring(0, width) : shifted;
+        }
+        int leftTrim = Math.min(value.length(), Math.abs(offset));
+        String shifted = value.substring(leftTrim);
+        return shifted.length() > width ? shifted.substring(0, width) : shifted;
     }
 
     private String fallbackEnemyLabel(EnemyViewState enemy) {

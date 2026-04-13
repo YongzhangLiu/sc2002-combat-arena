@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import arena.model.combatant.Combatant;
-import arena.model.combatant.Enemy;
 import arena.model.combatant.Player;
 import arena.model.item.Item;
 
@@ -25,17 +24,14 @@ public class UseItem extends Action {
             throw new IllegalStateException("No item selected.");
         }
 
-        List<Enemy> enemyList = new ArrayList<>();
+        List<Combatant> opponentList = new ArrayList<>();
         if (opponents != null) {
             for (Combatant combatant : opponents) {
-                if (combatant instanceof Enemy enemy) {
-                    enemyList.add(enemy);
-                }
+                opponentList.add(combatant);
             }
         }
 
-        Enemy enemyTarget = (target instanceof Enemy) ? (Enemy) target : null;
-        item.use(player, enemyList, enemyTarget);
+        item.use(player, opponentList, target);
         player.removeItem(item);
     }
 }
