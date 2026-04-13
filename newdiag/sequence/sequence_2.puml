@@ -1,0 +1,57 @@
+@startuml Sequence_2
+hide footbox
+title Scenario 2: Player Turn — Warrior Defends Against Goblin's Next Attack
+
+participant "ArenaBattleScreen" as Screen
+participant "GameApp" as App
+participant "BattleEngine" as Engine
+participant "PlayerAction" as PA
+participant "Defend" as Defend
+participant "DefendBuff" as Buff
+participant "Warrior" as Warrior
+participant "GameState" as State
+
+note over Screen, State
+  Scenarios 2 and 3 occur within the same executePlayerTurn() call.
+  Warrior (SPD 30) acts first → defends.
+  Goblin (SPD 25) acts second → attacks with reduced damage (Scenario 3).
+  This diagram focuses on the Warrior (player) phase.
+end note
+
+Screen -> App : onDefend()
+App -> Engine : executePlayerTurn(2, 0, null, 1.0)
+Engine -> State : getPlayer() → Warrior
+Engine -> State : getCurrentWave() → [Goblin]
+
+note over Engine : Iterating turnOrderSnapshot...\nProcessing: Warrior (Player)
+
+Engine -> Warrior : beginTurn()
+note over Warrior : No active effects\ncanAct = true
+Warrior --> Engine : true
+
+Engine -> Engine : executeChosenPlayerAction(choice=2, ...)
+Engine -> PA : defend(warrior)
+PA -> Defend : new Defend()
+PA -> Defend : execute(warrior, tempEnemy, tempList)
+Defend -> Warrior : isAlive()
+Warrior --> Defend : true
+Defend -> Buff : new DefendBuff()
+note over Buff : turns = 2\ndefenseBoost = 10
+Defend -> Warrior : addStatusEffect(defendBuff)
+Warrior -> Buff : onApply(warrior)
+note over Warrior : defendBuff added to activeEffects
+
+Engine -> Engine : pendingTurnFrames.add(TurnFrame("Warrior defends."))
+Engine -> Engine : sweepDeadEnemies()
+
+note over Engine : Goblin phase follows next\n(see Scenario 3)
+
+Engine -> State : checkEndCondition() → 0
+Engine -> Engine : endRound()
+Engine --> App : 0 (continue)
+
+App -> Engine : drainTurnFrames()
+Engine --> App : [TurnFrame("Warrior defends."), TurnFrame("Goblin attacks.", ...)]
+App -> Screen : render frames sequentially
+
+@enduml

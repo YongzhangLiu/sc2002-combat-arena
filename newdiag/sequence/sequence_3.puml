@@ -1,0 +1,55 @@
+@startuml Sequence_3
+hide footbox
+title Scenario 3: Enemy Turn — Goblin Attack Reduced by Warrior's DefendBuff
+
+participant "BattleEngine" as Engine
+participant "Goblin" as Goblin
+participant "BasicEnemyActionStrategy" as Strategy
+participant "Warrior" as Warrior
+participant "DefendBuff" as Buff
+participant "GameApp" as App
+
+note over Engine, App
+  Continuation of the same executePlayerTurn() call as Scenario 2.
+  Warrior (SPD 30) already defended — DefendBuff is now active (turns=2, boost=+10).
+  Now processing: Goblin (SPD 25) in the enemy phase.
+end note
+
+Engine -> Goblin : beginTurn()
+note over Goblin : No active effects\ncanAct = true
+Goblin --> Engine : true
+
+Engine -> Goblin : getStrategy()
+Goblin --> Engine : BasicEnemyActionStrategy
+
+Engine -> Strategy : execute(goblin, [warrior])
+Strategy -> Warrior : isAlive()
+Warrior --> Strategy : true
+Strategy -> Goblin : getAttack()
+Goblin --> Strategy : 35
+
+Strategy -> Warrior : getDefense()
+note over Warrior : Iterates activeEffects\ncalls DefendBuff.modifyDefense(20)
+Warrior -> Buff : modifyDefense(20)
+note over Buff : returns 20 + defenseBoost(10) = 30
+Buff --> Warrior : 30
+Warrior --> Strategy : 30
+
+note over Strategy : damage = max(0, 35 − 30) = 5\nReduced vs Scenario 1 (was 15)
+
+Strategy -> Warrior : takeDamage(5, goblin)
+note over Warrior : Iterates activeEffects\nDefendBuff.modifyIncomingDamage(5,...) = 5 (no override)\nhp -= 5
+Warrior --> Strategy : 5
+
+Engine -> Engine : lastPlayerDamage = 5
+Engine -> Engine : pendingTurnFrames.add(TurnFrame("Goblin attacks.", damage=5))
+Engine -> Engine : sweepDeadEnemies()
+note over Engine : Goblin alive — nothing removed
+
+note over Engine : All combatants processed.\ncheckEndCondition → 0 → endRound()
+
+Engine --> App : 0 (continue)
+App -> Engine : drainTurnFrames()
+App -> App : render TurnFrame (floatingDamage=5 on Warrior)
+
+@enduml

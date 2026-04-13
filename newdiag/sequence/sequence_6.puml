@@ -1,0 +1,58 @@
+@startuml Sequence_6
+hide footbox
+title Scenario 6: Player Turn — Warrior Uses Potion to Heal
+
+participant "ArenaBattleScreen" as Screen
+participant "GameApp" as App
+participant "BattleEngine" as Engine
+participant "PlayerAction" as PA
+participant "UseItem" as UI
+participant "Potion" as Potion
+participant "Warrior" as Warrior
+participant "DefendBuff" as Buff
+participant "GameState" as State
+
+note over Screen, State
+  Scenarios 6 and 7 occur within the same executePlayerTurn() call.
+  Warrior (SPD 30) acts first → uses Potion.
+  Goblin (SPD 25) acts second → still stunned, skips again (Scenario 7).
+  This diagram focuses on the Warrior (player) phase.
+  Note: DefendBuff from Scenario 2 expires here (turns: 1→0).
+end note
+
+Screen -> App : onUseItem(itemIndex, targetIndex)
+App -> App : item = player.getInventory().get(itemIndex)
+App -> Engine : executePlayerTurn(3, targetIndex, potion, 1.0)
+Engine -> State : getPlayer() → Warrior
+
+note over Engine : Iterating turnOrderSnapshot...\nProcessing: Warrior (Player)
+
+Engine -> Warrior : beginTurn()
+note over Warrior : Iterates activeEffects\ncalls DefendBuff.onTurnStart(warrior)
+Warrior -> Buff : onTurnStart(warrior)
+note over Buff : remainingTurns-- (1→0)\nreturns false (don't skip)
+Buff --> Warrior : false
+note over Warrior : DefendBuff.isExpired()? turns=0 → true\nDefendBuff.onExpire(warrior) called\nDefendBuff removed from activeEffects\ncanAct = true
+Warrior --> Engine : true
+
+Engine -> Engine : executeChosenPlayerAction(choice=3, ...)
+Engine -> PA : consumeItem(warrior, goblin, [goblin], potion)
+PA -> UI : new UseItem(potion)
+PA -> UI : execute(warrior, goblin, [goblin])
+
+note over UI : actor instanceof Player → ok\nitem != null → ok
+UI -> Potion : use(warrior, [goblin], goblin)
+Potion -> Warrior : heal(100)
+note over Warrior : hp = min(maxHp, hp + 100)
+Warrior --> Potion : done
+
+UI -> Warrior : removeItem(potion)
+note over Warrior : potion removed from inventory
+Warrior --> UI : true
+
+Engine -> Engine : pendingTurnFrames.add(TurnFrame("Warrior uses Potion."))
+Engine -> Engine : sweepDeadEnemies()
+
+note over Engine : Goblin phase follows next\n(see Scenario 7)
+
+@enduml

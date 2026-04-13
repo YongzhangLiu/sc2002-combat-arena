@@ -1,0 +1,135 @@
+@startuml uml_model
+title Model Components (Actions / Effects / Items)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam package {
+    BackgroundColor #E8F5E9
+    BorderColor #388E3C
+}
+
+hide empty members
+
+' ── Actions ─────────────────────────────────────
+package "arena.model.action" {
+
+    abstract class Action {
+        - name : String
+        ..
+        + getName() : String
+        + {abstract} execute(actor, target, all) : void
+    }
+
+    class BasicAttack {
+        + execute(actor, target, all) : void
+        note: damage = attacker.ATK - target.DEF
+    }
+
+    class Defend {
+        + execute(actor, target, all) : void
+        note: applies DefendBuff to actor
+    }
+
+    class UseItem {
+        - item : Item
+        ..
+        + execute(actor, target, all) : void
+        note: calls item.use() then removes item
+    }
+
+    class UseSpecialSkill {
+        + execute(actor, target, all) : void
+        note: delegates to player.useSpecialSkill()
+    }
+}
+
+' ── Effects ─────────────────────────────────────
+package "arena.model.effect" {
+
+    abstract class StatusEffect {
+        # remainingTurns : int
+        ..
+        + onTurnStart(combatant) : boolean
+        + modifyDefense(base) : int
+        + modifyIncomingDamage(dmg, src, tgt) : int
+        + isExpired() : boolean
+        + onApply(combatant) : void
+        + onExpire(combatant) : void
+    }
+
+    class DefendBuff {
+        turns=2  defenseBoost=+10
+        ..
+        + modifyDefense(base) : int
+        note: returns base + 10
+    }
+
+    class StunEffect {
+        DEFAULT_DURATION = 2
+        ..
+        + onTurnStart(combatant) : boolean
+        note: decrements turns, returns true\n(skip turn) until expired
+    }
+
+    class SmokeBombEffect {
+        + modifyIncomingDamage(dmg, src, tgt) : int
+        note: blocks all incoming damage\nfrom enemies (returns 0)
+    }
+}
+
+' ── Items ────────────────────────────────────────
+package "arena.model.item" {
+
+    abstract class Item {
+        - name : String
+        - description : String
+        ..
+        + getName() : String
+        + {abstract} use(player, enemies, target) : void
+    }
+
+    class Potion {
+        HEAL_AMOUNT = 100
+        ..
+        + use(player, enemies, target) : void
+        note: player.heal(100)
+    }
+
+    class PowerStone {
+        + use(player, enemies, target) : void
+        note: triggerSpecialSkillWithoutCooldown()
+    }
+
+    class SmokeBomb {
+        + use(player, enemies, target) : void
+        note: applies SmokeBombEffect to player
+    }
+}
+
+' ── Inheritance ──────────────────────────────────
+Action      <|-- BasicAttack
+Action      <|-- Defend
+Action      <|-- UseItem
+Action      <|-- UseSpecialSkill
+
+StatusEffect <|-- DefendBuff
+StatusEffect <|-- StunEffect
+StatusEffect <|-- SmokeBombEffect
+
+Item <|-- Potion
+Item <|-- PowerStone
+Item <|-- SmokeBomb
+
+' ── Cross-group associations ─────────────────────
+UseItem     --> Item         : holds
+Defend      ..> DefendBuff   : creates
+SmokeBomb   ..> SmokeBombEffect : creates
+PowerStone  ..> Player       : calls triggerSpecialSkill
+
+note bottom of Player : Defined in\nCombatant module
+
+@enduml

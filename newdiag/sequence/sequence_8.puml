@@ -1,0 +1,74 @@
+@startuml Sequence_8
+hide footbox
+title Scenario 8: Player Turn — Warrior Basic Attack Eliminates Goblin
+
+participant "ArenaBattleScreen" as Screen
+participant "GameApp" as App
+participant "QtePolicy" as QTE
+participant "BattleEngine" as Engine
+participant "Warrior" as Warrior
+participant "Goblin" as Goblin
+participant "GameState" as State
+
+note over Screen, State
+  Goblin's StunEffect has expired (Scenario 7).
+  Warrior acts first (SPD 30 > Goblin SPD 25).
+  Basic attack now uses QTE multiplier via applyScaledAttack().
+  PlayerAction.bAttack() is NOT used for basic attack in the new engine.
+end note
+
+Screen -> App : onBasicAttack(targetIndex)
+App -> QTE : resolveAttackQte()
+note over QTE : NoOpQtePolicy → always NORMAL\nor CustomModeQtePolicy → shows timing bar
+QTE --> App : QteResult.NORMAL (multiplier = 1.0)
+
+App -> Engine : executePlayerTurn(1, targetIndex, null, multiplier=1.0)
+Engine -> State : getPlayer() → Warrior
+Engine -> State : getCurrentWave() → [Goblin]
+
+note over Engine : Iterating turnOrderSnapshot...\nProcessing: Warrior (Player)
+
+Engine -> Warrior : beginTurn()
+note over Warrior : No active effects\ncanAct = true
+Warrior --> Engine : true
+
+Engine -> Engine : executeChosenPlayerAction(choice=1, ...)
+note over Engine : case 1 → applyScaledAttack(warrior, goblin, 1.0)\n(does NOT go through PlayerAction.bAttack)
+
+Engine -> Warrior : getAttack()
+Warrior --> Engine : 40
+Engine -> Goblin : getDefense()
+note over Goblin : No active effects\nbaseDefense = 15
+Goblin --> Engine : 15
+note over Engine : baseDamage = max(0, 40 − 15) = 25\nscaledDamage = round(25 × 1.0) = 25
+
+Engine -> Goblin : takeDamage(25)
+note over Goblin : No effects to modifyIncomingDamage\nhp = max(0, hp − 25) = 0
+Goblin --> Engine : 25 (lethal)
+
+Engine -> Engine : lastEnemyDamages = [25]
+Engine -> Engine : pendingTurnFrames.add(TurnFrame("Warrior attacks.", enemyDamages=[25]))
+Engine -> Engine : sweepDeadEnemies()
+
+Engine -> Goblin : isAlive()
+Goblin --> Engine : false (hp = 0)
+Engine -> Engine : pendingTurnFrames.add(TurnFrame("Goblin was defeated!"))
+note over Engine : currentWave.remove(goblin)\nturnOrder.remove(goblin)
+Engine -> State : setCurrentWave([])
+Engine -> State : advanceWaveIfCleared()
+note over State : wave empty, no further waves\nreturns false (game over condition)
+
+Engine -> State : checkEndCondition()
+note over State : all waves cleared, player alive\nreturns 1 (victory)
+State --> Engine : 1
+
+note over Engine : endCondition != 0 → endRound() NOT called
+Engine --> App : 1 (VICTORY)
+
+App -> Engine : drainTurnFrames()
+Engine --> App : [TurnFrame("Warrior attacks."), TurnFrame("Goblin was defeated!")]
+App -> App : render frames with animation
+App -> App : checkEndCondition(1, triggerEndgameScreen=true)
+App -> Screen : EndgameScreen.show(victory=true, ...)
+
+@enduml

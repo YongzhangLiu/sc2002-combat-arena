@@ -1,0 +1,120 @@
+@startuml uml_ui
+title UI Module (arena.ui) — Simplified
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam package {
+    BackgroundColor #FCE4EC
+    BorderColor #880E4F
+}
+
+hide empty members
+
+package "arena.ui (entry)" {
+
+    class GameSetup {
+        + playerClass : String
+        + itemSlot1 : String
+        + itemSlot2 : String
+        + difficulty : String
+        + customOpponentType : String
+        + customQteEnabled : boolean
+    }
+
+    class GameStartRequest <<record>> {
+        + setup : GameSetup
+        + fullScreen : boolean
+        + asciiMode : boolean
+    }
+
+    class StartMenu <<Static>> {
+        + {static} launch(screen, gui, ..., onStart) : void
+        + {static} applyUniformButtonTheme(gui) : void
+        note: orchestrates setup screens\nbefore handing off to GameApp
+    }
+}
+
+package "arena.ui.screen (battle)" {
+
+    class ArenaBattleScreen {
+        + initialize(screen, gui, ...) : void
+        + setCallbacks(callbacks) : void
+        + render(state) : void
+        + showAndWait(state) : void
+        + setDamageOffsets(player, enemies) : void
+        + close() : void
+    }
+
+    interface ActionCallbacks {
+        + onBasicAttack(targetIndex) : void
+        + onDefend() : void
+        + onUseItem(itemIndex, targetIndex) : void
+        + onSpecialSkill(targetIndex) : void
+        + onBackToMenu() : void
+    }
+
+    class EndgameScreen <<Static>> {
+        + {static} show(screen, gui, victory, ..., cb) : void
+    }
+
+    interface EndgameCallbacks {
+        + onReplaySameSettings() : void
+        + onStartNewGame() : void
+        + onQuit() : void
+    }
+
+    note "Setup screens (PlayerSelection,\nItemSelection, Difficulty,\nEnemyInfo, CustomModeSetup)\norchestrated by StartMenu" as SetupNote
+}
+
+package "arena.ui.model (view state)" {
+
+    class ArenaViewStateMapper <<Static>> {
+        + {static} fromGameState(...) : ArenaViewState
+        note: reads GameState, maps to\nUI-safe view objects
+    }
+
+    class ArenaViewState {
+        + playerState : PlayerViewState
+        + aliveEnemies : List<EnemyViewState>
+        + combatLog : List<String>
+        + victory / defeat : boolean
+        ..
+        + getCurrentTarget() : EnemyViewState
+        + isGameOver() : boolean
+    }
+
+    class PlayerViewState {
+        + name, type, spriteKey : String
+        + currentHp, maxHp, attack : int
+        + activeEffects : List<StatusIconViewState>
+        + floatingDamage : Integer
+    }
+
+    class EnemyViewState {
+        + name, type, spriteKey : String
+        + currentHp, maxHp : int
+        + isAlive : boolean
+        + floatingDamage : Integer
+        ..
+        + getHpPercent() : int
+    }
+}
+
+' ── Relationships ──────────────────────────────
+GameStartRequest   *--  GameSetup
+StartMenu          ..>  GameStartRequest : produces
+
+ArenaBattleScreen  ..>  ActionCallbacks  : uses
+ArenaBattleScreen  -->  ArenaViewState   : renders
+
+EndgameScreen      ..>  EndgameCallbacks : uses
+
+ArenaViewStateMapper ..> ArenaViewState  : creates
+ArenaViewState       *-- PlayerViewState
+ArenaViewState       *-- EnemyViewState
+
+@enduml

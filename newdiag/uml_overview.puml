@@ -1,0 +1,103 @@
+@startuml uml_overview
+title System Overview — Layer Architecture
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam package {
+    BorderColor #555555
+}
+
+hide empty members
+
+package "UI Layer" #FCE4EC {
+    class GameApp {
+        + run() : void
+        + {static} main(args) : void
+        - startGameSession(request) : void
+        - handlePlayerTurn(state, screen, engine) : void
+    }
+    class StartMenu <<Static>>
+    class ArenaBattleScreen
+    class EndgameScreen <<Static>>
+    class ArenaViewStateMapper <<Static>>
+}
+
+package "Engine Layer" #F3E5F5 {
+    class BattleEngine {
+        + executePlayerTurn(choice, target, item) : int
+        + sweepDeadEnemies() : void
+        + drainTurnFrames() : List<TurnFrame>
+    }
+    class GameState <<Static>> {
+        + {static} checkEndCondition() : int
+        + {static} newTurnOrder() : void
+        + {static} advanceWaveIfCleared() : boolean
+    }
+    class GameInit
+    class PlayerAction
+    class GameModeFactory <<Static>>
+    interface GameMode
+    interface QtePolicy
+}
+
+package "Strategy Layer" #E3F2FD {
+    interface TurnOrderStrategy
+    interface EnemyActionStrategy
+    class SpeedBasedTurnOrder
+    class BasicEnemyActionStrategy
+    interface AiTurnController
+    class RandomAiTurnController
+}
+
+package "Domain Layer" #FFFDE7 {
+    abstract class Combatant
+    abstract class Player
+    abstract class Enemy
+    class Warrior
+    class Wizard
+    class Goblin
+    class Wolf
+    abstract class Item
+    abstract class Action
+    abstract class StatusEffect
+}
+
+' ── Layer connections ──────────────────────────
+GameApp          -->  StartMenu
+GameApp          -->  BattleEngine
+GameApp          -->  GameInit
+GameApp          -->  ArenaViewStateMapper
+GameApp          -->  ArenaBattleScreen
+GameApp          -->  EndgameScreen
+GameApp          -->  GameModeFactory
+GameApp          -->  QtePolicy
+
+BattleEngine     -->  GameState
+BattleEngine     -->  PlayerAction
+BattleEngine     -->  AiTurnController
+GameModeFactory  ..>  GameMode
+GameInit         -->  GameState
+
+ArenaViewStateMapper --> GameState
+
+TurnOrderStrategy    <|..  SpeedBasedTurnOrder
+EnemyActionStrategy  <|..  BasicEnemyActionStrategy
+AiTurnController     <|..  RandomAiTurnController
+
+GameState        ..>  TurnOrderStrategy : uses
+Enemy            -->  EnemyActionStrategy : uses
+
+Combatant <|-- Player
+Combatant <|-- Enemy
+Player    <|-- Warrior
+Player    <|-- Wizard
+Enemy     <|-- Goblin
+Enemy     <|-- Wolf
+Player    *--  Item
+Combatant *--  StatusEffect
+
+@enduml

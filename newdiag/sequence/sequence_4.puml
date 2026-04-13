@@ -1,0 +1,62 @@
+@startuml Sequence_4
+hide footbox
+title Scenario 4: Player Turn — Warrior Uses Shield Bash, Stunning Goblin
+
+participant "ArenaBattleScreen" as Screen
+participant "GameApp" as App
+participant "BattleEngine" as Engine
+participant "PlayerAction" as PA
+participant "UseSpecialSkill" as USS
+participant "Warrior" as Warrior
+participant "StunEffect" as Stun
+participant "Goblin" as Goblin
+participant "GameState" as State
+
+note over Screen, State
+  Scenarios 4 and 5 occur within the same executePlayerTurn() call.
+  Warrior (SPD 30) acts first → Shield Bash stuns Goblin.
+  Goblin (SPD 25) acts second → is stunned, skips turn (Scenario 5).
+  This diagram focuses on the Warrior (player) phase.
+end note
+
+Screen -> App : onSpecialSkill(targetIndex)
+App -> Engine : executePlayerTurn(4, targetIndex, null, 1.0)
+Engine -> State : getPlayer() → Warrior
+Engine -> State : getCurrentWave() → [Goblin]
+
+note over Engine : Iterating turnOrderSnapshot...\nProcessing: Warrior (Player)
+
+Engine -> Warrior : beginTurn()
+note over Warrior : DefendBuff.onTurnStart() called\nremainingTurns-- (2→1), returns false\nDefendBuff.isExpired()? turns=1 → no\ncanAct = true
+Warrior --> Engine : true
+
+Engine -> Engine : executeChosenPlayerAction(choice=4, ...)
+Engine -> PA : specialSkill(warrior, goblin, [goblin])
+PA -> USS : new UseSpecialSkill()
+PA -> USS : execute(warrior, goblin, [goblin])
+
+USS -> Warrior : useSpecialSkill([goblin], goblin)
+Warrior -> Warrior : canUseSpecialSkill()
+note over Warrior : cooldown = 0 → true
+Warrior -> Warrior : performSpecialSkill([goblin], goblin)
+
+note over Warrior : damage = max(0, getAttack(40) − goblin.getDefense(15)) = 25
+Warrior -> Goblin : takeDamage(25, warrior)
+note over Goblin : No active effects\nhp -= 25
+Goblin --> Warrior : 25
+
+Warrior -> Stun : new StunEffect()
+note over Stun : DEFAULT_DURATION = 2\nremainingTurns = 2
+Warrior -> Goblin : addStatusEffect(stunEffect)
+Goblin -> Stun : onApply(goblin)
+note over Goblin : stunEffect added to activeEffects
+
+Warrior -> Warrior : specialSkillCooldown = 3
+
+Engine -> Engine : pendingTurnFrames.add(TurnFrame("Warrior casts Shield Bash."))
+Engine -> Engine : sweepDeadEnemies()
+note over Engine : Goblin hp > 0 — alive, not removed
+
+note over Engine : Goblin phase follows next\n(see Scenario 5)
+
+@enduml

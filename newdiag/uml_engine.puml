@@ -1,0 +1,180 @@
+@startuml uml_engine
+title Engine Module (arena.engine)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam package {
+    BackgroundColor #F3E5F5
+    BorderColor #6A1B9A
+}
+
+hide empty members
+
+' ── Core ────────────────────────────────────────
+package "arena.engine" {
+
+    class GameState <<Static>> {
+        - {static} currentRound : int
+        - {static} players : List<Player>
+        - {static} enemies : List<List<Combatant>>
+        - {static} turnOrder : List<Combatant>
+        - {static} combatLog : Deque<String>
+        ..
+        + {static} resetState() : void
+        + {static} getPlayer() : Player
+        + {static} getCurrentWave() : List<Combatant>
+        + {static} getTurnOrder() : List<Combatant>
+        + {static} checkEndCondition() : int
+        + {static} newTurnOrder() : void
+        + {static} advanceWaveIfCleared() : boolean
+        + {static} addLog(msg) : void
+    }
+
+    class BattleEngine {
+        - playerAction : PlayerAction
+        - aiTurnController : AiTurnController
+        - pendingTurnFrames : List<TurnFrame>
+        ..
+        + executePlayerTurn(choice, target, item) : int
+        + executePlayerTurn(choice, target, item, multiplier) : int
+        + sweepDeadEnemies() : void
+        + drainTurnFrames() : List<TurnFrame>
+        + endRound() : void
+    }
+
+    class "BattleEngine.TurnFrame" as TurnFrame {
+        - message : String
+        - playerDamage : Integer
+        - enemyDamages : List<Integer>
+        - snapshotPlayerHp : int
+        - snapshotEnemyHps : Map<Combatant, Integer>
+        ..
+        + getMessage() : String
+        + getPlayerDamage() : Integer
+        + getEnemyDamages() : List<Integer>
+    }
+
+    class PlayerAction {
+        + bAttack(player, target) : void
+        + defend(player) : void
+        + specialSkill(player, target, enemies) : void
+        + consumeItem(player, target, enemies, item) : void
+    }
+
+    class GameInit {
+        + initPlayers(choice, name) : Player
+        + chooseItems(player, choice) : void
+        + initEnemies(difficulty) : List<List<Combatant>>
+        + initCustomEnemies(opponentType) : List<List<Combatant>>
+        + startGame() : void
+    }
+}
+
+' ── Controller ──────────────────────────────────
+package "arena.engine.controller" {
+
+    interface AiTurnController {
+        + resolveTurn(aiPlayer, humanTarget) : AiTurnResult
+    }
+
+    class RandomAiTurnController {
+        + resolveTurn(aiPlayer, humanTarget) : AiTurnResult
+        note: randomly picks attack / defend\n/ item / special each turn
+    }
+
+    class AiTurnResult {
+        - message : String
+        - damageToPlayer : Integer
+        ..
+        + getMessage() : String
+        + getDamageToPlayer() : Integer
+    }
+}
+
+' ── Mode ────────────────────────────────────────
+package "arena.engine.mode" {
+
+    interface GameMode {
+        + id() : String
+        + initializeEnemies(init, setup) : void
+        + usesQte() : boolean
+    }
+
+    class StandardMode {
+        - difficulty : int
+        ..
+        + id() : String
+        + initializeEnemies(init, setup) : void
+        + usesQte() : boolean
+        note: delegates to init.initEnemies(difficulty)
+    }
+
+    class CustomDuelMode {
+        - qteEnabled : boolean
+        ..
+        + id() : String
+        + initializeEnemies(init, setup) : void
+        + usesQte() : boolean
+        note: delegates to init.initCustomEnemies(type)
+    }
+
+    class GameModeFactory <<Static>> {
+        + {static} fromSetup(setup) : GameMode
+        note: returns StandardMode or CustomDuelMode\nbased on setup.difficulty
+    }
+}
+
+' ── QTE ─────────────────────────────────────────
+package "arena.engine.qte" {
+
+    interface QtePolicy {
+        + resolveAttackQte() : QteResult
+    }
+
+    class NoOpQtePolicy {
+        + resolveAttackQte() : QteResult
+        note: always returns NORMAL (1.0x)
+    }
+
+    class CustomModeQtePolicy {
+        + resolveAttackQte() : QteResult
+        note: shows timing bar UI,\nreturns EARLY / NORMAL / PERFECT
+    }
+
+    enum QteResult {
+        EARLY  (0.5x)
+        NORMAL (1.0x)
+        PERFECT (2.0x)
+        ..
+        + multiplier() : double
+    }
+}
+
+' ── Relationships ────────────────────────────────
+BattleEngine  -->  PlayerAction
+BattleEngine  -->  GameState
+BattleEngine  -->  AiTurnController
+BattleEngine  *--  TurnFrame
+GameInit      -->  GameState
+
+AiTurnController  <|..  RandomAiTurnController
+RandomAiTurnController  -->  PlayerAction
+RandomAiTurnController  ..>  AiTurnResult : creates
+
+GameMode   <|..  StandardMode
+GameMode   <|..  CustomDuelMode
+GameModeFactory  ..>  GameMode : creates
+
+QtePolicy  <|..  NoOpQtePolicy
+QtePolicy  <|..  CustomModeQtePolicy
+CustomModeQtePolicy  ..>  QteResult
+NoOpQtePolicy        ..>  QteResult
+
+StandardMode   ..>  GameInit : calls initEnemies
+CustomDuelMode ..>  GameInit : calls initCustomEnemies
+
+@enduml

@@ -1,0 +1,101 @@
+@startuml uml_combatant
+title Combatant Module (arena.model.combatant)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam package {
+    BackgroundColor #FFFDE7
+    BorderColor #F9A825
+}
+
+hide empty members
+
+package "arena.model.combatant" {
+
+    abstract class Combatant {
+        - name : String
+        - hp : int
+        - maxHp : int
+        - attack : int
+        - baseDefense : int
+        - speed : int
+        - activeEffects : List<StatusEffect>
+        ..
+        + getName() : String
+        + getHp() / getMaxHp() : int
+        + getAttack() / getDefense() / getSpeed() : int
+        + isAlive() : boolean
+        + heal(amount) : void
+        + takeDamage(amount) : int
+        + takeDamage(amount, attacker) : int
+        + beginTurn() : boolean
+        + addStatusEffect(effect) : void
+        + hasEffect(type) : boolean
+    }
+
+    abstract class Player {
+        - specialSkillCooldown : int
+        - inventory : List<Item>
+        ..
+        + canUseSpecialSkill() : boolean
+        + getSpecialSkillCooldown() : int
+        + useSpecialSkill(enemies, target) : void
+        + triggerSpecialSkillWithoutCooldown(enemies, target) : void
+        + decrementCooldownAfterTurn() : void
+        # {abstract} performSpecialSkill(enemies, target) : void
+        + addItem(item) : void
+        + removeItem(item) : boolean
+        + getInventory() : List<Item>
+    }
+
+    abstract class Enemy {
+        - strategy : EnemyActionStrategy
+        ..
+        + getStrategy() : EnemyActionStrategy
+    }
+
+    class Warrior {
+        HP=260  ATK=40  DEF=20  SPD=30
+        ..
+        # performSpecialSkill(enemies, target) : void
+        note: Shield Bash — deals damage\n+ applies StunEffect to target
+    }
+
+    class Wizard {
+        HP=200  ATK=50  DEF=10  SPD=20
+        ..
+        # performSpecialSkill(enemies, target) : void
+        note: Arcane Blast — hits all enemies,\n+10 ATK per kill
+    }
+
+    class Goblin {
+        HP=55  ATK=35  DEF=15  SPD=25
+    }
+
+    class Wolf {
+        HP=40  ATK=45  DEF=5  SPD=35
+    }
+}
+
+' Inheritance
+Combatant <|-- Player
+Combatant <|-- Enemy
+Player    <|-- Warrior
+Player    <|-- Wizard
+Enemy     <|-- Goblin
+Enemy     <|-- Wolf
+
+' Key compositions (referencing external types as stubs)
+Combatant "1" *-- "0..*" StatusEffect : activeEffects
+Player    "1" *-- "0..*" Item          : inventory
+Enemy          -->        EnemyActionStrategy : uses
+
+note bottom of StatusEffect : Defined in\nEffects module
+note bottom of Item          : Defined in\nItems module
+note bottom of EnemyActionStrategy : Defined in\nStrategy module
+
+@enduml

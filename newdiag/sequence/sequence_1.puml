@@ -1,0 +1,59 @@
+@startuml Sequence_1
+hide footbox
+title Scenario 1: Enemy Turn — Goblin Executes Basic Attack on Warrior
+
+participant "ArenaBattleScreen" as Screen
+participant "GameApp" as App
+participant "BattleEngine" as Engine
+participant "GameState" as State
+participant "Goblin" as Goblin
+participant "BasicEnemyActionStrategy" as Strategy
+participant "Warrior" as Warrior
+
+note over Screen, Warrior
+  SpeedBasedTurnOrder sorts all combatants by speed DESC.
+  Warrior (SPD 30) acts first, Goblin (SPD 25) acts second.
+  Both phases occur inside a single executePlayerTurn() call.
+  This diagram focuses on the Goblin (enemy) phase.
+end note
+
+Screen -> App : onBasicAttack(targetIndex)
+App -> Engine : executePlayerTurn(1, targetIndex, null, qte.multiplier)
+
+note over Engine : Iterating turnOrderSnapshot...\nWarrior phase complete (omitted here).\nNow processing: Goblin (Enemy)
+
+Engine -> Goblin : beginTurn()
+note over Goblin : No active effects\ncanAct = true
+Goblin --> Engine : true
+
+Engine -> Goblin : getStrategy()
+Goblin --> Engine : BasicEnemyActionStrategy
+
+Engine -> Strategy : execute(goblin, [warrior])
+Strategy -> Warrior : isAlive()
+Warrior --> Strategy : true
+Strategy -> Goblin : getAttack()
+Goblin --> Strategy : 35
+Strategy -> Warrior : getDefense()
+note over Warrior : No active effects\nbaseDefense = 20
+Warrior --> Strategy : 20
+note over Strategy : damage = max(0, 35 − 20) = 15
+Strategy -> Warrior : takeDamage(15, goblin)
+note over Warrior : No effects to modifyIncomingDamage\nhp -= 15
+Warrior --> Strategy : 15
+
+Engine -> Engine : lastPlayerDamage = 15
+Engine -> Engine : pendingTurnFrames.add(TurnFrame("Goblin attacks.", damage=15))
+Engine -> Engine : sweepDeadEnemies()
+note over Engine : Goblin alive — nothing removed
+
+Engine -> State : checkEndCondition()
+State --> Engine : 0 (continue)
+Engine -> Engine : endRound()
+Engine --> App : 0 (continue)
+
+App -> Engine : drainTurnFrames()
+Engine --> App : [TurnFrame("Goblin attacks.", playerDamage=15)]
+App -> Screen : render(ArenaViewState with floatingDamage=15)
+
+@enduml

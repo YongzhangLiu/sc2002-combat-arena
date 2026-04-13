@@ -1,0 +1,44 @@
+@startuml Sequence_7
+hide footbox
+title Scenario 7: Enemy Turn — Goblin Still Stunned, StunEffect Expires
+
+participant "BattleEngine" as Engine
+participant "Goblin" as Goblin
+participant "StunEffect" as Stun
+participant "GameState" as State
+participant "GameApp" as App
+
+note over Engine, App
+  Continuation of the same executePlayerTurn() call as Scenario 6.
+  Goblin's StunEffect has remainingTurns=1 entering this turn.
+  Now processing: Goblin (SPD 25) in the enemy phase.
+end note
+
+Engine -> Goblin : beginTurn()
+note over Goblin : Iterates activeEffects\ncalls StunEffect.onTurnStart(goblin)
+Goblin -> Stun : onTurnStart(goblin)
+note over Stun : remainingTurns > 0\nremainingTurns-- (1→0)\nreturn true (skip turn)
+Stun --> Goblin : true (skip turn)
+
+Goblin -> Stun : isExpired()
+note over Stun : remainingTurns = 0 → true
+Stun --> Goblin : true
+
+Goblin -> Stun : onExpire(goblin)
+note over Goblin : StunEffect removed from activeEffects\ncanAct = false\nreturns false
+Goblin --> Engine : false (cannot act)
+
+note over Engine : beginTurn() returned false\nEnemy AI strategy NOT executed\nNo damage TurnFrame added
+
+Engine -> Engine : sweepDeadEnemies()
+note over Engine : Goblin alive — nothing removed
+
+Engine -> State : checkEndCondition() → 0
+Engine -> Engine : endRound()
+note over Engine : endRound() decrements specialSkillCooldown (2→1)\nrebuilds turn order — Goblin has NO StunEffect now
+
+Engine --> App : 0 (continue)
+App -> Engine : drainTurnFrames()
+App -> App : render TurnFrames\n(only Warrior's Potion frame)
+
+@enduml

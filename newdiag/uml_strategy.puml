@@ -1,0 +1,47 @@
+@startuml uml_strategy
+title Strategy Module (arena.strategy)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam package {
+    BackgroundColor #E3F2FD
+    BorderColor #1565C0
+}
+
+hide empty members
+
+package "arena.strategy" {
+
+    interface TurnOrderStrategy {
+        + buildTurnOrder(players, enemies) : List<Combatant>
+    }
+
+    class SpeedBasedTurnOrder {
+        + buildTurnOrder(players, enemies) : List<Combatant>
+        note: Player always first,\nthen enemies sorted by speed DESC
+    }
+
+    interface EnemyActionStrategy {
+        + execute(enemy, players) : void
+    }
+
+    class BasicEnemyActionStrategy {
+        + execute(enemy, players) : void
+        note: attacks the first alive player
+    }
+}
+
+TurnOrderStrategy   <|..  SpeedBasedTurnOrder
+EnemyActionStrategy <|..  BasicEnemyActionStrategy
+
+note "Used by GameState.newTurnOrder()\nto rebuild turn queue each round" as N1
+SpeedBasedTurnOrder .. N1
+
+note "Held by each Enemy instance.\nCalled by BattleEngine each enemy turn." as N2
+BasicEnemyActionStrategy .. N2
+
+@enduml
