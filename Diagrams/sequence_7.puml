@@ -1,0 +1,58 @@
+@startuml Scenario_7
+hide footbox
+title Scenario 7: Enemy Turn - Goblin Still Stunned, Skips Turn (StunEffect Expires)
+
+participant GameApp
+participant BattleEngine
+participant GameState
+participant "Goblin" as Goblin
+participant "StunEffect\n(StatusEffect)" as StunEffect
+
+note over Goblin: StunEffect active (remainingTurns=1)
+
+GameApp -> BattleEngine: advanceTurnQueue()
+BattleEngine -> GameState: checkEndCondition()
+GameState --> BattleEngine: 0 (continue)
+BattleEngine -> GameState: getTurnOrder()
+GameState --> BattleEngine: [Goblin, ...]
+
+note over BattleEngine: currentAttacker = Goblin (instanceof Enemy)
+
+BattleEngine -> Goblin: isAlive()
+Goblin --> BattleEngine: true
+
+BattleEngine -> Goblin: beginTurn()
+note over Goblin: Iterates activeEffects\ncalls StunEffect.onTurnStart(goblin)
+Goblin -> StunEffect: onTurnStart(goblin)
+note over StunEffect: remainingTurns > 0\nremainingTurns-- (1 -> 0)\nreturn true (skip turn)
+StunEffect --> Goblin: true (skip turn)
+note over Goblin: canAct = false\nStunEffect.isExpired()? turns=0 -> true\ncalls StunEffect.onExpire(goblin)\nStunEffect removed from activeEffects\nreturns false
+Goblin -> StunEffect: isExpired()
+StunEffect --> Goblin: true
+Goblin -> StunEffect: onExpire(goblin)
+StunEffect --> Goblin: (done, stun removed)
+Goblin --> BattleEngine: false (cannot act this turn)
+
+note over BattleEngine: enemy.beginTurn() == false\nAI strategy NOT executed\nenemyActed = false
+
+BattleEngine -> BattleEngine: sweepDeadEnemies()
+note over BattleEngine: Goblin hp > 0, still alive\nnothing removed
+
+BattleEngine -> GameState: getTurnOrder() [remove Goblin from front]
+BattleEngine -> GameState: checkEndCondition()
+GameState --> BattleEngine: 0 (continue)
+
+note over BattleEngine: enemyActed = false -> do NOT pause\nTurn queue now empty -> endRound()
+
+BattleEngine -> BattleEngine: endRound()
+BattleEngine -> GameState: setCurrentRound(round + 1)
+BattleEngine -> GameState: getPlayer()
+GameState --> BattleEngine: Warrior
+BattleEngine -> Warrior: decrementCooldownAfterTurn()
+note over Warrior: specialSkillCooldown-- (2 -> 1)
+BattleEngine -> GameState: newTurnOrder()
+note over GameState: SpeedBasedTurnOrder rebuilds\n[Warrior, Goblin]\nGoblin has NO StunEffect now
+
+BattleEngine --> GameApp: 0 (player's turn next)
+
+@enduml

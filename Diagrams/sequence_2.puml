@@ -1,0 +1,48 @@
+@startuml Scenario_2
+hide footbox
+title Scenario 2: Player Turn - Warrior Defends Against Goblin's Next Attack
+
+participant GameApp
+participant BattleEngine
+participant GameState
+participant PlayerAction
+participant "Defend\n(Action)" as Defend
+participant "DefendBuff\n(StatusEffect)" as DefendBuff
+participant "Warrior" as Warrior
+
+GameApp -> BattleEngine: executePlayerTurn(2, targetIdx, null)
+BattleEngine -> GameState: getPlayer()
+GameState --> BattleEngine: Warrior
+BattleEngine -> GameState: getCurrentWave()
+GameState --> BattleEngine: [Goblin]
+
+BattleEngine -> Warrior: beginTurn()
+note over Warrior: No active effects\ncanAct = true\nreturns true
+Warrior --> BattleEngine: true (can act)
+
+note over BattleEngine: switch(playerChoice=2) -> defend branch
+BattleEngine -> GameState: addLog("Warrior is defending")
+BattleEngine -> PlayerAction: defend(warrior)
+
+PlayerAction -> Defend: new Defend()
+PlayerAction -> Defend: execute(warrior, tempEnemy, tempList)
+Defend -> Warrior: isAlive()
+Warrior --> Defend: true
+Defend -> DefendBuff: new DefendBuff()
+note over DefendBuff: calls DefendBuff(turns=2, defenseBoost=10)\nvia default constructor
+Defend -> Warrior: addStatusEffect(defendBuff)
+Warrior -> DefendBuff: onApply(warrior)
+note over Warrior: defendBuff appended to activeEffects list
+Defend --> PlayerAction: (done)
+PlayerAction --> BattleEngine: (done)
+
+note over BattleEngine: hpBefore == hpAfter for all enemies\nlastEnemyDamages = [0]
+
+BattleEngine -> GameState: getTurnOrder()
+note over BattleEngine: turnOrder.get(0) instanceof Player\nremove Warrior from front of queue
+BattleEngine -> GameState: checkEndCondition()
+GameState --> BattleEngine: 0 (continue)
+
+BattleEngine --> GameApp: 0 (player turn done, await next input)
+
+@enduml

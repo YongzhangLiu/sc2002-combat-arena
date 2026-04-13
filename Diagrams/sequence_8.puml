@@ -1,0 +1,75 @@
+@startuml Scenario_8
+hide footbox
+title Scenario 8: Player Turn - Warrior Basic Attack Eliminates Goblin
+
+participant GameApp
+participant BattleEngine
+participant GameState
+participant PlayerAction
+participant "BasicAttack\n(Action)" as BasicAttack
+participant "Warrior" as Warrior
+participant "Goblin" as Goblin
+
+note over Goblin: No active effects\n(StunEffect expired in Scenario 7)
+
+GameApp -> BattleEngine: executePlayerTurn(1, targetIdx, null)
+BattleEngine -> GameState: getPlayer()
+GameState --> BattleEngine: Warrior
+BattleEngine -> GameState: getCurrentWave()
+GameState --> BattleEngine: [Goblin]
+
+BattleEngine -> Warrior: beginTurn()
+note over Warrior: No active effects\ncanAct = true\nreturns true
+Warrior --> BattleEngine: true (can act)
+
+note over BattleEngine: switch(playerChoice=1) -> basic attack branch\nhpBefore = Goblin.getHp()
+BattleEngine -> GameState: addLog("Warrior performed an attack on Goblin")
+BattleEngine -> PlayerAction: bAttack(warrior, goblin)
+
+PlayerAction -> BasicAttack: new BasicAttack()
+PlayerAction -> BasicAttack: execute(warrior, goblin, tempList)
+BasicAttack -> Warrior: isAlive()
+Warrior --> BasicAttack: true
+BasicAttack -> Goblin: isAlive()
+Goblin --> BasicAttack: true
+
+BasicAttack -> Warrior: getAttack()
+Warrior --> BasicAttack: 40
+BasicAttack -> Goblin: getDefense()
+note over Goblin: baseDefense = 15\nNo active effects
+Goblin --> BasicAttack: 15
+note over BasicAttack: damage = max(0, 40 - 15) = 25
+
+BasicAttack -> Goblin: takeDamage(25, warrior)
+note over Goblin: No active effects to modifyIncomingDamage\nadjusted = 25\nhp = max(0, hp - 25) = 0
+Goblin --> BasicAttack: 25 (lethal damage)
+BasicAttack --> PlayerAction: (done)
+PlayerAction --> BattleEngine: (done)
+
+note over BattleEngine: lastEnemyDamages = [hpBefore - 0] = [25]
+
+BattleEngine -> GameState: getTurnOrder() [remove Warrior from front]
+BattleEngine -> GameState: checkEndCondition()
+GameState --> BattleEngine: 0 (continue, sweep not done yet)
+
+BattleEngine --> GameApp: 0 (player action done)
+
+note over GameApp: GameApp calls sweepDeadEnemies after UI animation
+
+GameApp -> BattleEngine: sweepDeadEnemies()
+BattleEngine -> Goblin: isAlive()
+Goblin --> BattleEngine: false (hp = 0)
+BattleEngine -> GameState: addLog("Goblin was defeated!")
+note over BattleEngine: currentWave.remove(goblin)\nturnOrder.remove(goblin)
+BattleEngine -> GameState: setCurrentWave([])
+BattleEngine -> GameState: advanceWaveIfCleared()
+note over GameState: currentWave is empty\nNo more waves -> victory condition met
+GameState --> BattleEngine: true
+
+BattleEngine -> GameState: checkEndCondition()
+note over GameState: All waves cleared\nPlayer alive\nreturn 1 (victory)
+GameState --> BattleEngine: 1 (victory)
+
+BattleEngine --> GameApp: 1 (VICTORY)
+
+@enduml

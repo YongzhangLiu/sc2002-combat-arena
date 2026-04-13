@@ -9,10 +9,35 @@ import arena.model.combatant.Player;
 import arena.model.item.Item;
 
 public class BattleEngine{
+    public static class TurnFrame {
+        private final String message;
+        private final Integer playerDamage;
+        private final List<Integer> enemyDamages;
+
+        public TurnFrame(String message, Integer playerDamage, List<Integer> enemyDamages) {
+            this.message = message;
+            this.playerDamage = playerDamage;
+            this.enemyDamages = enemyDamages == null ? null : new ArrayList<>(enemyDamages);
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public Integer getPlayerDamage() {
+            return playerDamage;
+        }
+
+        public List<Integer> getEnemyDamages() {
+            return enemyDamages;
+        }
+    }
+
     PlayerAction playerAction = new PlayerAction();
     private Player player;
     private int lastPlayerDamage = 0;
     private List<Integer> lastEnemyDamages = new ArrayList<>();
+    private final List<TurnFrame> pendingTurnFrames = new ArrayList<>();
 
     public int getLastPlayerDamage() {
         return lastPlayerDamage;
@@ -20,6 +45,12 @@ public class BattleEngine{
 
     public List<Integer> getLastEnemyDamages() {
         return lastEnemyDamages;
+    }
+
+    public List<TurnFrame> drainTurnFrames() {
+        List<TurnFrame> frames = new ArrayList<>(pendingTurnFrames);
+        pendingTurnFrames.clear();
+        return frames;
     }
 
     public void endRound(){
@@ -35,65 +66,72 @@ public class BattleEngine{
     }
 
     /**
-     * Executes the Player's chosen action against the target.
-     * Returns the 0, 1 (win), 2 (loss) status.
-     * Use advanceTurnQueue() to let enemies move after player.
+     * Resolves one full round after the player chooses an action.
+     * All combatants act according to current speed-based turn order.
      */
     public int executePlayerTurn(int playerChoice, int target, Item item){
         player = GameState.getPlayer();
         List<Enemy> currentWave = GameState.getCurrentWave();
-        
-        if (target < 0 || target >= currentWave.size()) {
+        if (player == null || currentWave == null) {
             return GameState.checkEndCondition();
         }
-        
-        Enemy targetEnemy = currentWave.get(target);
 
-        if (player.beginTurn()) {
-            List<Integer> hpBefore = new ArrayList<>();
-            for (Enemy e : currentWave) {
-                hpBefore.add(e.getHp());
+        lastPlayerDamage = 0;
+        lastEnemyDamages.clear();
+        pendingTurnFrames.clear();
+
+        boolean playerActionConsumed = false;
+        List<Combatant> turnOrderSnapshot = new ArrayList<>(GameState.getTurnOrder());
+
+        for (Combatant combatant : turnOrderSnapshot) {
+            if (GameState.checkEndCondition() != 0) {
+                break;
+            }
+            if (combatant == null || !combatant.isAlive()) {
+                continue;
             }
 
-            switch (playerChoice) {
-                case 1: //basic attack
-                    GameState.addLog(player.getName() + " performed an attack on " + targetEnemy.getName());
-                    playerAction.bAttack(player, targetEnemy);
-                    break;
-                case 2: //defend
-                    GameState.addLog(player.getName() + " is defending");
-                    playerAction.defend(player);
-                    break;
-                case 3: //item
-                    String itemName = item != null ? item.getName() : "an unknown item";
-                    GameState.addLog(player.getName() + " used " + itemName);
-                    playerAction.consumeItem(player, targetEnemy, currentWave, item);
-                    break;
-                case 4: //special
-                    // CD logic is currently handled in UI, this is unreachable if skill is in CD. 
-                    String skillName = player instanceof arena.model.combatant.Warrior ? "Shield Bash" : "Arcane Blast";
-                    GameState.addLog(player.getName() + " used " + skillName + " on " + targetEnemy.getName());
-                    playerAction.specialSkill(player, targetEnemy, currentWave);
-                    break;
-                default:
-                    break;
+            if (combatant instanceof Player actingPlayer) {
+                if (playerActionConsumed || actingPlayer != player) {
+                    continue;
+                }
+                if (actingPlayer.beginTurn()) {
+                    executeChosenPlayerAction(playerChoice, target, item, currentWave, actingPlayer);
+                    String playerActionMessage = switch (playerChoice) {
+                        case 1 -> actingPlayer.getName() + " attacks.";
+                        case 2 -> actingPlayer.getName() + " defends.";
+                        case 3 -> actingPlayer.getName() + " uses an item.";
+                        case 4 -> actingPlayer.getName() + " casts " + (actingPlayer instanceof arena.model.combatant.Warrior ? "Shield Bash." : "Arcane Blast.");
+                        default -> actingPlayer.getName() + " acts.";
+                    };
+                    pendingTurnFrames.add(new TurnFrame(playerActionMessage, null, lastEnemyDamages));
+                }
+                playerActionConsumed = true;
+                sweepDeadEnemies();
+                continue;
             }
 
-            lastEnemyDamages.clear();
-            for (int i = 0; i < currentWave.size(); i++) {
-                int damage = hpBefore.get(i) - currentWave.get(i).getHp();
-                lastEnemyDamages.add(damage);
+            if (combatant instanceof Enemy enemy) {
+                if (enemy.beginTurn() && enemy.getStrategy() != null && player.isAlive()) {
+                    List<Player> targetList = new ArrayList<>();
+                    targetList.add(player);
+                    int hpBefore = player.getHp();
+                    enemy.getStrategy().execute(enemy, targetList);
+                    int hpAfter = player.getHp();
+                    int damage = hpBefore - hpAfter;
+                    lastPlayerDamage = damage;
+                    pendingTurnFrames.add(new TurnFrame(enemy.getName() + " attacks.", damage > 0 ? damage : null, null));
+                }
+                sweepDeadEnemies();
             }
-            
-            // Note: We used to sweepDeadEnemies here. Now we'll let GameApp do it after the animation.
         }
-        
-        List<Combatant> turnOrder = GameState.getTurnOrder();
-        if (!turnOrder.isEmpty() && turnOrder.get(0) instanceof Player) {
-            turnOrder.remove(0); // Pop the player off the queue since they just went
+
+        int endCondition = GameState.checkEndCondition();
+        if (endCondition == 0) {
+            endRound();
+            endCondition = GameState.checkEndCondition();
         }
-        
-        return GameState.checkEndCondition();
+        return endCondition;
     }
 
     /**
@@ -103,70 +141,44 @@ public class BattleEngine{
      * Returns 0 for continue, 1 for win, 2 for loss.
      */
     public int advanceTurnQueue() {
-        int endCondition = GameState.checkEndCondition();
-        if (endCondition != 0) return endCondition;
+        return GameState.checkEndCondition();
+    }
 
-        List<Combatant> turnOrder = GameState.getTurnOrder();
-        player = GameState.getPlayer();
-
-        while (!turnOrder.isEmpty()) {
-            Combatant currentAttacker = turnOrder.get(0);
-            
-            // If it's a player's turn, we must PAUSE and return to the UI for input
-            if (currentAttacker instanceof Player) {
-                return 0; // Game continues, waiting for UI
-            }
-
-            // It's an Enemy. Process their AI Strategy automatically.
-            boolean enemyActed = false;
-            if (currentAttacker instanceof Enemy enemy) {
-                if (enemy.isAlive() && enemy.beginTurn()) {
-                    if (enemy.getStrategy() != null) {
-                        GameState.addLog(enemy.getName() + " performed an attack on " + player.getName());
-                        List<Player> targetList = new ArrayList<>();
-                        targetList.add(player);
-                        int hpBefore = player.getHp();
-                        enemy.getStrategy().execute(enemy, targetList);
-                        int hpAfter = player.getHp();
-                        lastPlayerDamage = hpBefore - hpAfter;
-                        enemyActed = true;
-                    }
-                }
-                sweepDeadEnemies();
-            }
-            
-            // Re-fetch turn order as sweepDeadEnemies might have modified it
-            turnOrder = GameState.getTurnOrder();
-            if (!turnOrder.isEmpty() && turnOrder.get(0) == currentAttacker) {
-                // Pop the enemy off the queue
-                turnOrder.remove(0);
-            }
-            
-            // Check if player died
-            if (!player.isAlive()) {
-                GameState.addLog(player.getName() + " was killed by " + currentAttacker.getName());
-            }
-            
-            if (GameState.advanceWaveIfCleared()) {
-                return 3; // Immediately restart logic with new queue in next tick, return to let UI refresh
-            }
-            
-            // Ensure we check end conds periodically (ex: enemy killed player)
-            endCondition = GameState.checkEndCondition();
-            if (endCondition != 0) return endCondition;
-
-            // Pause to let UI render the enemy's action
-            if (enemyActed) {
-                return 3;
-            }
+    private void executeChosenPlayerAction(int playerChoice, int target, Item item, List<Enemy> currentWave, Player actingPlayer) {
+        if (currentWave == null || currentWave.isEmpty()) {
+            return;
         }
 
-        // If queue is empty, the round is over.
-        endRound();
-        
-        // After starting a new round, we still need to potentially run enemies that are faster than the player
-        // Recursing allows that safely!
-        return advanceTurnQueue();
+        int targetIndex = Math.max(0, Math.min(target, currentWave.size() - 1));
+        Enemy targetEnemy = currentWave.get(targetIndex);
+
+        List<Integer> hpBefore = new ArrayList<>();
+        for (Enemy e : currentWave) {
+            hpBefore.add(e.getHp());
+        }
+
+        switch (playerChoice) {
+            case 1: // basic attack
+                playerAction.bAttack(actingPlayer, targetEnemy);
+                break;
+            case 2: // defend
+                playerAction.defend(actingPlayer);
+                break;
+            case 3: // item
+                playerAction.consumeItem(actingPlayer, targetEnemy, currentWave, item);
+                break;
+            case 4: // special
+                playerAction.specialSkill(actingPlayer, targetEnemy, currentWave);
+                break;
+            default:
+                break;
+        }
+
+        lastEnemyDamages.clear();
+        for (int i = 0; i < currentWave.size(); i++) {
+            int damage = hpBefore.get(i) - currentWave.get(i).getHp();
+            lastEnemyDamages.add(damage);
+        }
     }
 
     public void sweepDeadEnemies() {
@@ -176,7 +188,7 @@ public class BattleEngine{
             for (int i = currentWave.size() - 1; i >= 0; i--) {
                 Enemy e = currentWave.get(i);
                 if (!e.isAlive()) {
-                    GameState.addLog(e.getName() + " was defeated!");
+                    pendingTurnFrames.add(new TurnFrame(e.getName() + " was defeated!", null, null));
                     currentWave.remove(i);
                     GameState.getTurnOrder().remove(e);
                     removed = true;

@@ -80,8 +80,14 @@ public final class UiPreview {
                 "You were killed by Goblin", // lastLogEntry
                 new EndgameScreen.EndgameCallbacks() {
                     @Override
-                    public void onBackToMenu() {
-                        // System.out.println("User clicked Back to Menu");
+                    public void onReplaySameSettings() {
+                        // System.out.println("User clicked Replay");
+                        try { screen.stopScreen(); } catch (Exception ignored) {}
+                    }
+
+                    @Override
+                    public void onStartNewGame() {
+                        // System.out.println("User clicked Start New Game");
                         try { screen.stopScreen(); } catch (Exception ignored) {}
                     }
 

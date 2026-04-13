@@ -8,11 +8,12 @@ import com.googlecode.lanterna.TerminalSize;
  */
 public class ArenaLayoutCalculator {
     private static final int MIN_PANEL_WIDTH = 14;
-    private static final int MAX_INVENTORY_WIDTH = 28;
+    private static final int MAX_INVENTORY_WIDTH = 40;
     private static final int MAX_STATUS_WIDTH = 26;
-    private static final int MIN_INFO_WIDTH = 18;
-    private static final int UTILITY_HEIGHT = 10;
+    private static final int MIN_INFO_WIDTH = 12;
+    private static final int UTILITY_HEIGHT = 12;
     private static final int UTILITY_GAP = 1;
+    private static final int TOP_VERTICAL_OFFSET = 1;
 
     public LayoutBounds calculate(TerminalSize size) {
         int width = Math.max(40, size.getColumns());
@@ -20,15 +21,16 @@ public class ArenaLayoutCalculator {
 
         boolean compactMode = width < 90 || height < 30;
 
-        int utilityHeight = Math.min(UTILITY_HEIGHT, Math.max(6, height - 10));
+        int utilityHeight = Math.min(UTILITY_HEIGHT, Math.max(7, height - 10));
         int actionBarHeight = compactMode ? 3 : 4;
-        int arenaHeight = Math.max(6, height - utilityHeight - actionBarHeight);
+        int arenaHeight = Math.max(6, height - TOP_VERTICAL_OFFSET - utilityHeight - actionBarHeight);
 
         int totalGaps = UTILITY_GAP * 2;
         int availableUtilityWidth = Math.max(MIN_PANEL_WIDTH * 3, width - totalGaps);
 
-        int inventoryWidth = Math.min(MAX_INVENTORY_WIDTH, Math.max(MIN_PANEL_WIDTH, (int) Math.round(availableUtilityWidth * 0.27)));
-        int statusWidth = Math.min(MAX_STATUS_WIDTH, Math.max(MIN_PANEL_WIDTH, (int) Math.round(availableUtilityWidth * 0.24)));
+        // Keep logs compact and give inventory more horizontal room for two item slots.
+        int inventoryWidth = Math.min(MAX_INVENTORY_WIDTH, Math.max(MIN_PANEL_WIDTH, (int) Math.round(availableUtilityWidth * 0.45)));
+        int statusWidth = Math.min(MAX_STATUS_WIDTH, Math.max(MIN_PANEL_WIDTH, (int) Math.round(availableUtilityWidth * 0.22)));
         int infoWidth = availableUtilityWidth - inventoryWidth - statusWidth;
 
         if (infoWidth < MIN_INFO_WIDTH) {
@@ -44,12 +46,12 @@ public class ArenaLayoutCalculator {
             infoWidth = availableUtilityWidth - inventoryWidth - statusWidth;
         }
 
-        Rect inventoryPanel = new Rect(0, 0, inventoryWidth, utilityHeight);
-        Rect infoPanel = new Rect(inventoryWidth + UTILITY_GAP, 0, infoWidth, utilityHeight);
-        Rect statusPanel = new Rect(inventoryWidth + UTILITY_GAP + infoWidth + UTILITY_GAP, 0, statusWidth, utilityHeight);
+        Rect inventoryPanel = new Rect(0, TOP_VERTICAL_OFFSET, inventoryWidth, utilityHeight);
+        Rect infoPanel = new Rect(inventoryWidth + UTILITY_GAP, TOP_VERTICAL_OFFSET, infoWidth, utilityHeight);
+        Rect statusPanel = new Rect(inventoryWidth + UTILITY_GAP + infoWidth + UTILITY_GAP, TOP_VERTICAL_OFFSET, statusWidth, utilityHeight);
 
-        Rect arenaPanel = new Rect(0, utilityHeight, width, arenaHeight);
-        Rect actionBar = new Rect(0, utilityHeight + arenaHeight, width, actionBarHeight);
+        Rect arenaPanel = new Rect(0, TOP_VERTICAL_OFFSET + utilityHeight, width, arenaHeight);
+        Rect actionBar = new Rect(0, TOP_VERTICAL_OFFSET + utilityHeight + arenaHeight, width, actionBarHeight);
 
         return new LayoutBounds(
             new Rect(0, 0, width, height),

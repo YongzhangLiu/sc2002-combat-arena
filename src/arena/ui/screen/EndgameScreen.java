@@ -32,7 +32,8 @@ import static arena.ui.util.ScreenUtil.dialogSizeForScreen;
 public class EndgameScreen {
 
     public interface EndgameCallbacks {
-        void onBackToMenu();
+        void onReplaySameSettings();
+        void onStartNewGame();
         void onQuit();
     }
 
@@ -57,7 +58,7 @@ public class EndgameScreen {
         int bannerHeight = bannerLines.size();
         
         // Let Lanterna automatically size the internal components to fit exactly what is needed
-        int assumedBoxHeight = isVictory ? 11 : 12;
+        int assumedBoxHeight = isVictory ? 13 : 14;
         int totalContentHeight = bannerHeight + assumedBoxHeight + 2; 
         
         DialogComposer.addVerticalPaddingTop(mainPanel, rows, totalContentHeight);
@@ -91,9 +92,14 @@ public class EndgameScreen {
         innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
         // Buttons fit inside the dialog box
-        innerContent.addComponent(DialogComposer.centered(new Button("Back to Menu", () -> {
+        innerContent.addComponent(DialogComposer.centered(new Button("Replay Same Settings", () -> {
             window.close();
-            if (callbacks != null) callbacks.onBackToMenu();
+            if (callbacks != null) callbacks.onReplaySameSettings();
+        })));
+
+        innerContent.addComponent(DialogComposer.centered(new Button("Start New Game", () -> {
+            window.close();
+            if (callbacks != null) callbacks.onStartNewGame();
         })));
         
         innerContent.addComponent(DialogComposer.centered(new Button("Quit", () -> {
@@ -104,7 +110,7 @@ public class EndgameScreen {
         innerContent.addComponent(new EmptySpace(new TerminalSize(1, 1)));
         
         // Let Lanterna automatically size the internal components to fit exactly what is needed
-        innerContent.setPreferredSize(new TerminalSize(contentWidth, isVictory ? 9 : 10));
+        innerContent.setPreferredSize(new TerminalSize(contentWidth, isVictory ? 11 : 12));
 
         // Use our new CustomBorder to get rounded corners (or ASCII mode fallback)
         com.googlecode.lanterna.gui2.Border borderBox = new arena.ui.util.CustomBorder(asciiMode);

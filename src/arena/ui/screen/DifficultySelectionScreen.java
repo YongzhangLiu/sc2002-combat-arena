@@ -34,7 +34,10 @@ public class DifficultySelectionScreen {
 
         int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
         String[] infoLines = fittedLines(
-            "Choose level:\n",
+            "Choose level:\n"
+                + "Easy: 3 enemies (3 Goblins)\n"
+                + "Medium: 4 enemies total (1 Goblin + 1 Wolf, then 2 Wolves)\n"
+                + "Hard: 5 enemies total (2 Goblins, then 1 Goblin + 2 Wolves)\n",
             Math.max(1, dialogSize.getRows() - 14),
             contentWidth
         );

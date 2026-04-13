@@ -133,7 +133,15 @@ public class StartMenu {
             // panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
             panel.addComponent(DialogComposer.centered(new Button("New Game", () -> {
-                startNewGameFlow(screen, gui, config.fullScreen, config.asciiMode, onSetupReady);
+                BasicWindow backdrop = createSetupBackdrop(screen, config.fullScreen);
+                gui.addWindow(backdrop);
+                window.setVisible(false);
+                try {
+                    startNewGameFlow(screen, gui, config.fullScreen, config.asciiMode, onSetupReady);
+                } finally {
+                    backdrop.close();
+                    window.setVisible(true);
+                }
             })));
             panel.addComponent(DialogComposer.centered(new Button("View Controls", () -> {
                 showMessage(screen, gui, config.fullScreen, config.asciiMode, "CONTROLS",
@@ -250,8 +258,18 @@ public class StartMenu {
         return fitted;
     }
 
+    private static BasicWindow createSetupBackdrop(Screen screen, boolean fullScreen) {
+        BasicWindow backdrop = new BasicWindow();
+        backdrop.setHints(Arrays.asList(Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING, Window.Hint.CENTERED));
+        TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
+        backdrop.setFixedSize(dialogSize);
+        // Keep setup transitions from flashing to plain black while the main menu is hidden.
+        backdrop.setComponent(new EmptySpace(TextColor.ANSI.WHITE));
+        return backdrop;
+    }
+
     static void startNewGameFlow(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode, Consumer<GameSetup> onSetupReady) {
-        GameSetup setup = new GameSetup("Warrior", "Potion", "Easy");
+        GameSetup setup = new GameSetup("Warrior", "Easy");
 
         int currentScreen = 0; // 0: player, 1: item, 2: enemy, 3: difficulty
         while (currentScreen >= 0 && currentScreen < 4) {
@@ -276,7 +294,7 @@ public class StartMenu {
 
     private static String buildSetupSummary(GameSetup setup) {
         return "Player: " + setup.playerClass + "\n"
-            + "Item: " + setup.item + "\n"
+            + "Items: " + setup.itemSlot1 + ", " + setup.itemSlot2 + "\n"
             + "Difficulty: " + setup.difficulty + "\n"
             + "\n"
             + "Next: connect setup to battle engine flow.";

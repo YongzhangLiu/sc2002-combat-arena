@@ -19,6 +19,8 @@ import java.io.IOException;
 public class GameApp {
     private Screen screen;
     private MultiWindowTextGUI gui;
+    private arena.ui.GameSetup activeSetup;
+    private arena.ui.GameSetup pendingReplaySetup;
     
     public GameApp() throws IOException {
         initializeTerminal();
@@ -52,17 +54,17 @@ public class GameApp {
     }
     
     private void startGameSession(arena.ui.GameSetup setup) {
+        activeSetup = cloneSetup(setup);
+        pendingReplaySetup = null;
         GameInit init = new arena.engine.GameInit();
         
         // 1. Init Player Class
         int classChoice = "Wizard".equalsIgnoreCase(setup.playerClass) ? 2 : 1;
         arena.model.combatant.Player player = init.initPlayers(classChoice, "Player");
         
-        // 2. Add Item
-        int itemChoice = 1;
-        if ("Power Stone".equalsIgnoreCase(setup.item)) itemChoice = 2;
-        else if ("Smoke Bomb".equalsIgnoreCase(setup.item)) itemChoice = 3;
-        init.chooseItems(player, itemChoice);
+        // 2. Add up to two selected items (None is allowed).
+        applySelectedItem(init, player, setup.itemSlot1);
+        applySelectedItem(init, player, setup.itemSlot2);
         
         // 3. Init Enemies
         int diffChoice = 1;
@@ -75,12 +77,6 @@ public class GameApp {
         
         // 5. Connect UI
         BattleEngine engine = new BattleEngine();
-        
-        // Pre-advance turn queue in case an enemy is faster and goes first
-        int initialState = engine.advanceTurnQueue();
-        if (checkEndCondition(initialState, false)) {
-            return;
-        }
 
         ArenaBattleScreen battleScreen = new ArenaBattleScreen();
         battleScreen.initialize(screen, gui, false, false);
@@ -125,65 +121,33 @@ public class GameApp {
         // 7. Render loops blocking wait call
         ArenaViewState viewState = arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Battle Started!");
         battleScreen.showAndWait(viewState);
+
+        if (pendingReplaySetup != null) {
+            arena.ui.GameSetup replaySetup = pendingReplaySetup;
+            pendingReplaySetup = null;
+            startGameSession(replaySetup);
+        }
     }
     
     private void handlePlayerTurn(int state, ArenaBattleScreen battleScreen, BattleEngine engine) {
-        java.util.List<Integer> dmgs = engine.getLastEnemyDamages();
-        boolean hasDamage = false;
-        if (dmgs != null) {
-            for (Integer d : dmgs) {
-                if (d != null && d > 0) {
-                    hasDamage = true;
-                    break;
-                }
+        java.util.List<arena.engine.BattleEngine.TurnFrame> frames = engine.drainTurnFrames();
+        for (arena.engine.BattleEngine.TurnFrame frame : frames) {
+            if (frame.getMessage() != null && !frame.getMessage().isBlank()) {
+                GameState.addLog(frame.getMessage());
             }
-        }
-
-        if (hasDamage) {
-            // Render the floating damage popup for enemies
-            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Player Action", null, dmgs));
+            Integer playerDamage = frame.getPlayerDamage();
+            java.util.List<Integer> enemyDamages = frame.getEnemyDamages();
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, frame.getMessage(), playerDamage, enemyDamages));
             refreshScreen();
-            try { Thread.sleep(1000); } catch (InterruptedException e) {}
-        }
-        
-        // Clean up any enemies that died from the attack
-        engine.sweepDeadEnemies();
-        state = GameState.checkEndCondition();
-
-        handleTurnResult(state, battleScreen, engine);
-    }
-    
-    private void handleTurnResult(int state, ArenaBattleScreen battleScreen, BattleEngine engine) {
-        // Continue enemies queue if player ended their turn
-        if (state == 0) {
-            state = engine.advanceTurnQueue();
+            try { Thread.sleep(850); } catch (InterruptedException e) {}
         }
 
-        while (state == 3) {
-            // An enemy just went. Let's render the initial state (updates log).
-            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Enemy Action"));
-            refreshScreen();
-            
-            // try { Thread.sleep(500); } catch (InterruptedException e) {}
-
-            int dmg = engine.getLastPlayerDamage();
-            if (dmg > 0) {
-                // Render the floating damage popup
-                battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Enemy Action", dmg));
-                refreshScreen();
-                try { Thread.sleep(1000); } catch (InterruptedException e) {}
-            }
-
-            // Push next turn
-            state = engine.advanceTurnQueue();
-        }
-        
         boolean isGameOver = checkEndCondition(state, true);
         if (isGameOver) {
             battleScreen.close(); // Close battle screen, return control and then show endgame screen
         } else {
             // Update battle UI with new states
-            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Turn Advanced."));
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, "Round resolved."));
         }
     }
     
@@ -217,9 +181,15 @@ public class GameApp {
             
             arena.ui.screen.EndgameScreen.show(screen, gui, false, false, victory, hp, totalRounds, enemiesRemaining, lastLog, new arena.ui.screen.EndgameScreen.EndgameCallbacks() {
                 @Override
-                public void onBackToMenu() {
+                public void onReplaySameSettings() {
+                    GameState.clearLog();
+                    pendingReplaySetup = cloneSetup(activeSetup);
+                }
+
+                @Override
+                public void onStartNewGame() {
                     GameState.clearLog(); // clear the log specifically on endgame
-                    // Loop naturally goes back to StartMenu because runSession is in a while loop inside StartMenu
+                    pendingReplaySetup = null;
                 }
 
                 @Override
@@ -241,6 +211,32 @@ public class GameApp {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void applySelectedItem(GameInit init, arena.model.combatant.Player player, String itemName) {
+        if (itemName == null || "None".equalsIgnoreCase(itemName)) {
+            return;
+        }
+
+        int itemChoice = 1;
+        if ("Power Stone".equalsIgnoreCase(itemName)) {
+            itemChoice = 2;
+        } else if ("Smoke Bomb".equalsIgnoreCase(itemName)) {
+            itemChoice = 3;
+        }
+        init.chooseItems(player, itemChoice);
+    }
+
+    private arena.ui.GameSetup cloneSetup(arena.ui.GameSetup source) {
+        arena.ui.GameSetup clone = new arena.ui.GameSetup(
+            source != null ? source.playerClass : "Warrior",
+            source != null ? source.difficulty : "Easy"
+        );
+        if (source != null) {
+            clone.itemSlot1 = source.itemSlot1;
+            clone.itemSlot2 = source.itemSlot2;
+        }
+        return clone;
     }
     
     public static void main(String[] args) {

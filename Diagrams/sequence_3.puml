@@ -1,0 +1,65 @@
+@startuml Scenario_3
+hide footbox
+title Scenario 3: Enemy Turn - Goblin Attack Reduced by Warrior's DefendBuff
+
+participant GameApp
+participant BattleEngine
+participant GameState
+participant "Goblin" as Goblin
+participant "BasicEnemyActionStrategy" as Strategy
+participant "Warrior" as Warrior
+participant "DefendBuff\n(StatusEffect)" as DefendBuff
+
+note over Warrior: DefendBuff active\n(turns=2, defenseBoost=10)
+
+GameApp -> BattleEngine: advanceTurnQueue()
+BattleEngine -> GameState: checkEndCondition()
+GameState --> BattleEngine: 0 (continue)
+BattleEngine -> GameState: getTurnOrder()
+GameState --> BattleEngine: [Goblin, ...]
+
+note over BattleEngine: currentAttacker = Goblin (instanceof Enemy)
+
+BattleEngine -> Goblin: isAlive()
+Goblin --> BattleEngine: true
+BattleEngine -> Goblin: beginTurn()
+note over Goblin: No active effects\ncanAct = true\nreturns true
+Goblin --> BattleEngine: true (can act)
+
+BattleEngine -> GameState: addLog("Goblin performed an attack on Warrior")
+BattleEngine -> Goblin: getStrategy()
+Goblin --> BattleEngine: BasicEnemyActionStrategy
+
+BattleEngine -> Strategy: execute(goblin, [warrior])
+Strategy -> Warrior: isAlive()
+Warrior --> Strategy: true
+
+Strategy -> Goblin: getAttack()
+Goblin --> Strategy: 35
+
+Strategy -> Warrior: getDefense()
+note over Warrior: Iterates activeEffects\ncalls DefendBuff.modifyDefense(baseDefense=20)
+Warrior -> DefendBuff: modifyDefense(20)
+note over DefendBuff: returns 20 + defenseBoost(10) = 30
+DefendBuff --> Warrior: 30
+Warrior --> Strategy: 30
+
+note over Strategy: damage = max(0, 35 - 30) = 5\nDamage reduced vs Scenario 1 (was 15)
+
+Strategy -> Warrior: takeDamage(5, goblin)
+note over Warrior: Iterates activeEffects\nDefendBuff.modifyIncomingDamage(5,...) returns 5 unchanged\nadjusted = 5\nhp = hp - 5
+Warrior --> Strategy: 5 (actual damage dealt)
+Strategy --> BattleEngine: (done)
+
+BattleEngine -> BattleEngine: lastPlayerDamage = hpBefore - hpAfter = 5
+BattleEngine -> BattleEngine: sweepDeadEnemies()
+note over BattleEngine: Goblin hp > 0, still alive\nnothing removed
+
+BattleEngine -> GameState: getTurnOrder() [remove Goblin from front]
+BattleEngine -> GameState: checkEndCondition()
+GameState --> BattleEngine: 0 (continue)
+
+note over BattleEngine: enemyActed = true -> pause for UI
+BattleEngine --> GameApp: 3 (enemy acted, pause for UI refresh)
+
+@enduml

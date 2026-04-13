@@ -143,6 +143,9 @@ public class ArenaBattleScreen {
 
     private Panel buildSkeletonPanel(ArenaLayoutCalculator.LayoutBounds bounds, ArenaViewState state) {
         Panel root = new Panel(new LinearLayout(Direction.VERTICAL));
+        if (bounds.inventoryPanel().row() > 0) {
+            root.addComponent(new EmptySpace(new TerminalSize(1, bounds.inventoryPanel().row())));
+        }
 
         Panel topRow = new Panel(new LinearLayout(Direction.HORIZONTAL));
         topRow.addComponent(buildInventoryPanel(bounds.inventoryPanel(), state));
@@ -170,32 +173,40 @@ public class ArenaBattleScreen {
 
     private Component buildInventoryPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
         int innerWidth = Math.max(8, rect.width() - 2);
-        int spacer = 3;
+        int spacer = 2;
         int leftWidth = Math.max(4, (innerWidth - spacer) / 2);
         int rightWidth = Math.max(4, innerWidth - spacer - leftWidth);
 
-        List<String> itemLines = new ArrayList<>();
-        itemLines.add(" Item");
-        itemLines.addAll(loadInventorySprite(state, leftWidth, 5));
+        String slot1Name = getItemNameAt(state, 0);
+        String slot2Name = getItemNameAt(state, 1);
 
-        List<String> skillLines = new ArrayList<>();
-        skillLines.add("Special");
-        skillLines.addAll(loadSkillSprite(state, rightWidth, 5));
-        
-        if (state.getPlayerState() != null) {
-            int cd = state.getPlayerState().getSpecialSkillCooldown();
-            if (cd > 0) {
-                skillLines.add(" CD: " + cd);
-            } else {
-                skillLines.add(" Ready");
-            }
+        List<String> slot1Lines = new ArrayList<>();
+        slot1Lines.add(" Item 1");
+        slot1Lines.addAll(loadInventorySlotSprite(slot1Name, leftWidth, 3));
+        slot1Lines.add(fittedLine(slot1Name, leftWidth));
+
+        List<String> slot2Lines = new ArrayList<>();
+        slot2Lines.add(" Item 2");
+        slot2Lines.addAll(loadInventorySlotSprite(slot2Name, rightWidth, 3));
+        slot2Lines.add(fittedLine(slot2Name, rightWidth));
+
+        String skillName = getSkillDisplayName(state);
+        String skillStatus;
+        if (state.getPlayerState() == null) {
+            skillStatus = "Cooldown: N/A";
+        } else {
+            int cooldown = state.getPlayerState().getSpecialSkillCooldown();
+            skillStatus = cooldown > 0 ? "Cooldown: " + cooldown : "Cooldown: Ready";
         }
+        slot1Lines.add(fittedLine(skillName, leftWidth));
+        slot2Lines.add(fittedLine(skillStatus, rightWidth));
+        slot1Lines.addAll(loadSkillSprite(state, leftWidth, 2));
 
         int bodyRows = Math.max(1, rect.height() - 2);
         List<String> body = new ArrayList<>();
         for (int row = 0; row < bodyRows; row++) {
-            String left = row < itemLines.size() ? fittedLine(itemLines.get(row), leftWidth) : "";
-            String right = row < skillLines.size() ? fittedLine(skillLines.get(row), rightWidth) : "";
+            String left = row < slot1Lines.size() ? slot1Lines.get(row) : "";
+            String right = row < slot2Lines.size() ? slot2Lines.get(row) : "";
             body.add(padRight(left, leftWidth) + " ".repeat(spacer) + padRight(right, rightWidth));
         }
 
@@ -210,24 +221,38 @@ public class ArenaBattleScreen {
         base.setSize(new com.googlecode.lanterna.TerminalSize(rect.width(), rect.height()));
         wrapper.addComponent(base);
 
-        int itemRow = Math.min(bodyRows - 1, itemLines.size());
-        com.googlecode.lanterna.gui2.Button itemInfo = createInfoButton("(ℹ)", () -> {
-            String itemName = state.getAvailableItems().isEmpty() ? "No Item" : state.getAvailableItems().get(0);
-            String itemDesc = state.getAvailableItemDescriptions() != null && !state.getAvailableItemDescriptions().isEmpty() ? state.getAvailableItemDescriptions().get(0) : "Item accessible in combat.";
-            showInfoDialog(itemName, itemDesc, "Count: " + state.getAvailableItems().size());
+        int itemInfoRow = Math.min(bodyRows - 1, 1);
+        com.googlecode.lanterna.gui2.Button itemsInfo = createInfoButton("(i)", () -> {
+            String slot1Desc = getItemDescriptionAt(state, 0);
+            String slot2Desc = getItemDescriptionAt(state, 1);
+            showInfoDialog(
+                "Inventory Items",
+                "Item 1: " + slot1Name + "\nItem 2: " + slot2Name,
+                "Item 1 detail: " + slot1Desc + "\nItem 2 detail: " + slot2Desc
+            );
         });
-        itemInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + Math.max(0, leftWidth / 2 - 4), 1 + itemRow));
-        itemInfo.setSize(new com.googlecode.lanterna.TerminalSize(3, 1));
-        wrapper.addComponent(itemInfo);
+        itemsInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + Math.max(0, leftWidth / 2 - 2), 1 + itemInfoRow));
+        itemsInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
+        wrapper.addComponent(itemsInfo);
 
-        int skillRow = Math.min(bodyRows - 1, skillLines.size());
-        com.googlecode.lanterna.gui2.Button skillInfo = createInfoButton("(ℹ)", () -> {
-            String skillName = state.getPlayerState() != null ? state.getPlayerState().getType() + " Special" : "Special Skill";
-            String skillDesc = state.getSpecialSkillDescription() != null ? state.getSpecialSkillDescription() : "A powerful class ability.";
-            showInfoDialog(skillName, skillDesc, "Cooldown Timer: " + (state.getPlayerState() != null ? state.getPlayerState().getSpecialSkillCooldown() : 0));
+        com.googlecode.lanterna.gui2.Button skillInfo = createInfoButton("(i)", () -> {
+            String skillTitle = getSkillDisplayName(state);
+            String skillDescription = state.getSpecialSkillDescription() != null && !state.getSpecialSkillDescription().isBlank()
+                ? state.getSpecialSkillDescription()
+                : "No special skill information available.";
+            String cooldownText = "Cooldown: ";
+            if (state.getPlayerState() == null) {
+                cooldownText += "N/A";
+            } else {
+                int cooldown = state.getPlayerState().getSpecialSkillCooldown();
+                cooldownText += cooldown > 0 ? cooldown : "Ready";
+            }
+            showInfoDialog(skillTitle, skillDescription, cooldownText);
         });
-        skillInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + leftWidth + spacer + Math.max(0, rightWidth / 2 - 4), 1 + skillRow));
-        skillInfo.setSize(new com.googlecode.lanterna.TerminalSize(3, 1));
+        int skillLabelRow = Math.min(bodyRows - 1, 5);
+        int skillIconColumn = 1 + Math.max(0, Math.min(leftWidth - 3, skillName.length() + 1));
+        skillInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(skillIconColumn, 1 + skillLabelRow));
+        skillInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
         wrapper.addComponent(skillInfo);
 
         wrapper.setPreferredSize(new com.googlecode.lanterna.TerminalSize(rect.width(), rect.height()));
@@ -320,13 +345,21 @@ public class ArenaBattleScreen {
         boolean hasItems = state.getPlayerState() != null && state.getPlayerState().hasItems();
         String itemLabel = hasItems ? "Use Item" : "(Empty)";
         row.addComponent(createSafeButton(fittedLine(itemLabel, buttonWidth), () -> {
-            if (hasItems && callbacks != null) callbacks.onUseItem(0, targetIdx); // TODO: Replace 0 with selected item index
+            if (hasItems) {
+                showItemSelectionDialog(state, targetIdx);
+            }
         }));
         
         boolean skillAvailable = state.getPlayerState() != null && state.getPlayerState().isSpecialSkillAvailable();
-        String skillLabel = skillAvailable ? "Special Skill" : "Skill (CD: " + state.getPlayerState().getSpecialSkillCooldown() + ")";
+        String skillLabel = "Special Skill";
         row.addComponent(createSafeButton(fittedLine(skillLabel, buttonWidth), () -> {
-            if (skillAvailable && callbacks != null) callbacks.onSpecialSkill(targetIdx);
+            if (!skillAvailable) {
+                showSimpleDialog("SKILL NOT READY");
+                return;
+            }
+            if (callbacks != null) {
+                callbacks.onSpecialSkill(targetIdx);
+            }
         }));
 
         String toggleInfoLabel = showInfoButtons ? "Hide Info" : "Show Info";
@@ -345,38 +378,23 @@ public class ArenaBattleScreen {
 
     // Strip `< >` wrapping in buttons and reapply theming
     private Button createInfoButton(String label, Runnable action) {
-        Button b = new Button(label, action);
-        com.googlecode.lanterna.graphics.Theme baseTheme = new com.googlecode.lanterna.graphics.SimpleTheme(
-            com.googlecode.lanterna.TextColor.ANSI.BLACK, 
-            com.googlecode.lanterna.TextColor.ANSI.WHITE
-        );
-        b.setTheme(new com.googlecode.lanterna.graphics.DelegatingTheme(baseTheme) {
-            @Override
-            public com.googlecode.lanterna.graphics.ThemeDefinition getDefinition(Class<?> componentClass) {
-                return new com.googlecode.lanterna.graphics.DelegatingThemeDefinition(super.getDefinition(componentClass)) {
-                    @Override
-                    public <T extends com.googlecode.lanterna.gui2.Component> com.googlecode.lanterna.gui2.ComponentRenderer<T> getRenderer(Class<T> type) {
-                        return (com.googlecode.lanterna.gui2.ComponentRenderer<T>) new com.googlecode.lanterna.gui2.Button.ButtonRenderer() {
-                            @Override
-                            public com.googlecode.lanterna.TerminalSize getPreferredSize(Button button) {
-                                return new com.googlecode.lanterna.TerminalSize(com.googlecode.lanterna.TerminalTextUtils.getColumnWidth(button.getLabel()), 1);
-                            }
-                            @Override
-                            public void drawComponent(com.googlecode.lanterna.gui2.TextGUIGraphics graphics, Button button) {
-                                graphics.applyThemeStyle(button.getThemeDefinition().getNormal());
-                                graphics.putString(0, 0, button.getLabel());
-                            }
-                            @Override
-                            public com.googlecode.lanterna.TerminalPosition getCursorLocation(Button button) {
-                                return com.googlecode.lanterna.TerminalPosition.TOP_LEFT_CORNER;
-                            }
-                        };
-                    }
-                };
-            }
-        });
+        Button b = createSafeButton(label, action);
         b.setLayoutData(com.googlecode.lanterna.gui2.LinearLayout.createLayoutData(com.googlecode.lanterna.gui2.LinearLayout.Alignment.Center));
         return b;
+    }
+
+    private void showSimpleDialog(String message) {
+        if (gui == null) {
+            return;
+        }
+        BasicWindow window = new BasicWindow();
+        window.setHints(java.util.Arrays.asList(Window.Hint.CENTERED, Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING));
+        Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
+        panel.addComponent(new Label(message));
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        panel.addComponent(new Button("OK", window::close));
+        window.setComponent(panel);
+        gui.addWindowAndWait(window);
     }
 
     // Button that ignores mouse click release events to prevent accidental double activations due to lanterna's mouse event handling
@@ -585,7 +603,11 @@ public class ArenaBattleScreen {
             return;
         }
 
-        uiSelectedTargetIndex = Math.max(0, Math.min(index, enemyCount - 1));
+        int clampedIndex = Math.max(0, Math.min(index, enemyCount - 1));
+        if (clampedIndex == uiSelectedTargetIndex) {
+            return;
+        }
+        uiSelectedTargetIndex = clampedIndex;
 
         if (window == null || !window.isVisible()) {
             return;
@@ -811,8 +833,89 @@ public class ArenaBattleScreen {
         if (state.getAvailableItems().isEmpty()) {
             return loadSprite("item", "no_item", maxWidth, maxRows);
         }
-        String itemName = state.getAvailableItems().get(0).toLowerCase().replace(' ', '_');
+        String firstItem = state.getAvailableItems().stream()
+            .filter(name -> name != null && !name.isBlank() && !"None".equalsIgnoreCase(name))
+            .findFirst()
+            .orElse(null);
+
+        if (firstItem == null) {
+            return loadSprite("item", "no_item", maxWidth, maxRows);
+        }
+        String itemName = firstItem.toLowerCase().replace(' ', '_');
         return loadSprite("item", itemName, maxWidth, maxRows);
+    }
+
+    private List<String> loadInventorySlotSprite(String itemName, int maxWidth, int maxRows) {
+        if (itemName == null || itemName.isBlank() || "None".equalsIgnoreCase(itemName)) {
+            return loadSprite("item", "no_item", maxWidth, maxRows);
+        }
+        return loadSprite("item", itemName.toLowerCase().replace(' ', '_'), maxWidth, maxRows);
+    }
+
+    private String getItemNameAt(ArenaViewState state, int index) {
+        if (state.getAvailableItems() == null || index < 0 || index >= state.getAvailableItems().size()) {
+            return "None";
+        }
+        String itemName = state.getAvailableItems().get(index);
+        return (itemName == null || itemName.isBlank()) ? "None" : itemName;
+    }
+
+    private String getItemDescriptionAt(ArenaViewState state, int index) {
+        if (state.getAvailableItemDescriptions() == null
+            || index < 0
+            || index >= state.getAvailableItemDescriptions().size()) {
+            return "No item selected in this slot.";
+        }
+        String description = state.getAvailableItemDescriptions().get(index);
+        return (description == null || description.isBlank())
+            ? "No item selected in this slot."
+            : description;
+    }
+
+    private String getSkillDisplayName(ArenaViewState state) {
+        if (state == null || state.getPlayerState() == null || state.getPlayerState().getType() == null) {
+            return "Special Skill";
+        }
+        return switch (state.getPlayerState().getType()) {
+            case "Wizard" -> "Arcane Blast";
+            case "Warrior" -> "Shield Bash";
+            default -> "Special Skill";
+        };
+    }
+
+    private List<String> buildInventoryDisplayLines(ArenaViewState state, int width) {
+        List<String> lines = new ArrayList<>();
+        String slot1 = state.getAvailableItems().size() > 0 ? state.getAvailableItems().get(0) : "None";
+        String slot2 = state.getAvailableItems().size() > 1 ? state.getAvailableItems().get(1) : "None";
+        lines.add(fittedLine("Item 1: " + slot1, width));
+        lines.add(fittedLine("Item 2: " + slot2, width));
+        return lines;
+    }
+
+    private void showItemSelectionDialog(ArenaViewState state, int targetIdx) {
+        if (gui == null || callbacks == null || state == null || state.getAvailableItems().isEmpty()) {
+            return;
+        }
+
+        BasicWindow itemWindow = new BasicWindow();
+        itemWindow.setHints(java.util.Arrays.asList(Window.Hint.CENTERED, Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING));
+        Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
+        panel.addComponent(new Label("Choose item to use"));
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+
+        for (int i = 0; i < state.getAvailableItems().size(); i++) {
+            String itemName = state.getAvailableItems().get(i);
+            int itemIndex = i;
+            panel.addComponent(new Button(itemName, () -> {
+                itemWindow.close();
+                callbacks.onUseItem(itemIndex, targetIdx);
+            }));
+        }
+
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
+        panel.addComponent(new Button("Cancel", itemWindow::close));
+        itemWindow.setComponent(panel);
+        gui.addWindowAndWait(itemWindow);
     }
 
     private List<String> loadSkillSprite(ArenaViewState state, int maxWidth, int maxRows) {
