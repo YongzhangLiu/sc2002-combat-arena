@@ -261,7 +261,7 @@ public class ArenaBattleScreen {
                 slot2Desc
             );
         });
-        int item2Col = 1 + columnWidth + spacer;
+        int item2Col = 1 + (columnWidth + spacer) * 1;
         item2Info.setPosition(new com.googlecode.lanterna.TerminalPosition(item2Col + Math.max(0, columnWidth / 2 - 2), 1 + itemInfoRow));
         item2Info.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
         wrapper.addComponent(item2Info);
@@ -280,8 +280,8 @@ public class ArenaBattleScreen {
             }
             showInfoDialog(skillTitle, skillDescription, cooldownText);
         });
-        int skillLabelRow = Math.min(bodyRows - 1, 2);
-        int skillIconColumn = 1 + (columnWidth + spacer) * 2 + Math.max(0, columnWidth / 2 - 2);
+        int skillLabelRow = Math.min(bodyRows - 1, 5);
+        int skillIconColumn = 1 + (columnWidth * 2) + Math.max(0, columnWidth / 2 - 2);
         skillInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(skillIconColumn, 1 + skillLabelRow));
         skillInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
         wrapper.addComponent(skillInfo);
