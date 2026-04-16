@@ -187,41 +187,45 @@ public class ArenaBattleScreen {
 
     private Component buildInventoryPanel(ArenaLayoutCalculator.Rect rect, ArenaViewState state) {
         int innerWidth = Math.max(8, rect.width() - 2);
-        int spacer = 2;
-        int leftWidth = Math.max(4, (innerWidth - spacer) / 2);
-        int rightWidth = Math.max(4, innerWidth - spacer - leftWidth);
+        int columnCount = 3;
+        int spacer = 0;
+        int minColumnWidth = 7;
+        int usableWidth = innerWidth - (spacer * (columnCount - 1));
+        int columnWidth = Math.max(minColumnWidth, usableWidth / columnCount);
 
         String slot1Name = getItemNameAt(state, 0);
         String slot2Name = getItemNameAt(state, 1);
-
-        List<String> slot1Lines = new ArrayList<>();
-        slot1Lines.add(" Item 1");
-        slot1Lines.addAll(loadInventorySlotSprite(slot1Name, leftWidth, 3));
-        slot1Lines.add(fittedLine(slot1Name, leftWidth));
-
-        List<String> slot2Lines = new ArrayList<>();
-        slot2Lines.add(" Item 2");
-        slot2Lines.addAll(loadInventorySlotSprite(slot2Name, rightWidth, 3));
-        slot2Lines.add(fittedLine(slot2Name, rightWidth));
-
         String skillName = getSkillDisplayName(state);
+
+        List<String> col1Lines = new ArrayList<>();
+        col1Lines.add("Item 1");
+        col1Lines.addAll(loadInventorySlotSprite(slot1Name, columnWidth, 4));
+        col1Lines.add(fittedLine(slot1Name, columnWidth));
+
+        List<String> col2Lines = new ArrayList<>();
+        col2Lines.add("Item 2");
+        col2Lines.addAll(loadInventorySlotSprite(slot2Name, columnWidth, 4));
+        col2Lines.add(fittedLine(slot2Name, columnWidth));
+
+        List<String> col3Lines = new ArrayList<>();
         String skillStatus;
         if (state.getPlayerState() == null) {
-            skillStatus = "Cooldown: N/A";
+            skillStatus = " CD: N/A";
         } else {
             int cooldown = state.getPlayerState().getSpecialSkillCooldown();
-            skillStatus = cooldown > 0 ? "Cooldown: " + cooldown : "Cooldown: Ready";
+            skillStatus = cooldown > 0 ? " CD: " + cooldown : " Ready";
         }
-        slot1Lines.add(fittedLine(skillName, leftWidth));
-        slot2Lines.add(fittedLine(skillStatus, rightWidth));
-        slot1Lines.addAll(loadSkillSprite(state, leftWidth, 2));
+        col3Lines.add("Special");
+        col3Lines.addAll(loadSkillSprite(state, columnWidth, 4));
+        col3Lines.add(fittedLine(skillStatus, columnWidth));
 
         int bodyRows = Math.max(1, rect.height() - 2);
         List<String> body = new ArrayList<>();
         for (int row = 0; row < bodyRows; row++) {
-            String left = row < slot1Lines.size() ? slot1Lines.get(row) : "";
-            String right = row < slot2Lines.size() ? slot2Lines.get(row) : "";
-            body.add(padRight(left, leftWidth) + " ".repeat(spacer) + padRight(right, rightWidth));
+            String c1 = row < col1Lines.size() ? col1Lines.get(row) : "";
+            String c2 = row < col2Lines.size() ? col2Lines.get(row) : "";
+            String c3 = row < col3Lines.size() ? col3Lines.get(row) : "";
+            body.add(padRight(c1, columnWidth) + " ".repeat(spacer) + padRight(c2, columnWidth) + " ".repeat(spacer) + padRight(c3, columnWidth));
         }
 
         Component base = buildUtilitySection("Inventory", rect, body, false);
@@ -242,12 +246,25 @@ public class ArenaBattleScreen {
             showInfoDialog(
                 "Inventory Items",
                 "Item 1: " + slot1Name + "\nItem 2: " + slot2Name,
-                "Item 1 detail: " + slot1Desc + "\nItem 2 detail: " + slot2Desc
+                "Item 1: " + slot1Desc + "\nItem 2: " + slot2Desc
             );
         });
-        itemsInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + Math.max(0, leftWidth / 2 - 2), 1 + itemInfoRow));
+        itemsInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + Math.max(0, columnWidth / 2 - 2), 1 + itemInfoRow));
         itemsInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
         wrapper.addComponent(itemsInfo);
+
+        com.googlecode.lanterna.gui2.Button item2Info = createInfoButton("(i)", () -> {
+            String slot2Desc = getItemDescriptionAt(state, 1);
+            showInfoDialog(
+                "Item 2",
+                slot2Name,
+                slot2Desc
+            );
+        });
+        int item2Col = 1 + columnWidth + spacer;
+        item2Info.setPosition(new com.googlecode.lanterna.TerminalPosition(item2Col + Math.max(0, columnWidth / 2 - 2), 1 + itemInfoRow));
+        item2Info.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
+        wrapper.addComponent(item2Info);
 
         com.googlecode.lanterna.gui2.Button skillInfo = createInfoButton("(i)", () -> {
             String skillTitle = getSkillDisplayName(state);
@@ -263,8 +280,8 @@ public class ArenaBattleScreen {
             }
             showInfoDialog(skillTitle, skillDescription, cooldownText);
         });
-        int skillLabelRow = Math.min(bodyRows - 1, 5);
-        int skillIconColumn = 1 + Math.max(0, Math.min(leftWidth - 3, skillName.length() + 1));
+        int skillLabelRow = Math.min(bodyRows - 1, 2);
+        int skillIconColumn = 1 + (columnWidth + spacer) * 2 + Math.max(0, columnWidth / 2 - 2);
         skillInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(skillIconColumn, 1 + skillLabelRow));
         skillInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
         wrapper.addComponent(skillInfo);
@@ -417,6 +434,9 @@ public class ArenaBattleScreen {
             @Override
             public com.googlecode.lanterna.gui2.Interactable.Result handleKeyStroke(com.googlecode.lanterna.input.KeyStroke keyStroke) {
                 if (keyStroke.getKeyType() == com.googlecode.lanterna.input.KeyType.MouseEvent) {
+                    if (getBasePane() == null) {
+                        return com.googlecode.lanterna.gui2.Interactable.Result.HANDLED;
+                    }
                     com.googlecode.lanterna.input.MouseAction mouseEvent = (com.googlecode.lanterna.input.MouseAction) keyStroke;
                     if (mouseEvent.getActionType() == com.googlecode.lanterna.input.MouseActionType.CLICK_RELEASE) {
                         return com.googlecode.lanterna.gui2.Interactable.Result.HANDLED;
