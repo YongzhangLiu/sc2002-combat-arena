@@ -63,7 +63,7 @@ public class ItemSelectionScreen {
 
         Panel panel = new Panel(new LinearLayout());
         
-        int mainContentRows = 23;
+        int mainContentRows = 18;
         DialogComposer.addVerticalPaddingTop(panel, dialogSize.getRows(), mainContentRows);
         
         String headerLine = fittedLine(DialogComposer.formatDialogHeader("ITEM SELECTION", asciiMode), contentWidth);
@@ -77,15 +77,12 @@ public class ItemSelectionScreen {
         int cardsWidth = Math.max(30, dialogSize.getColumns() - rightPanelWidth - 8);
         int cardWidth = Math.max(12, (cardsWidth - 4) / 3);
 
-        Label activeSlotLabel = new Label("");
-        Label item1Label = new Label("");
-        Label item2Label = new Label("");
+        final Button[] item1Btn = new Button[1];
+        final Button[] item2Btn = new Button[1];
         Runnable refreshSelections = () -> {
-            activeSlotLabel.setText("Editing: Item " + (activeSlot[0] + 1));
-            item1Label.setText("Item 1: " + selectedItems[0]);
-            item2Label.setText("Item 2: " + selectedItems[1]);
+            item1Btn[0].setLabel((activeSlot[0] == 0 ? "* " : "") + "Item 1: " + selectedItems[0]);
+            item2Btn[0].setLabel((activeSlot[0] == 1 ? "* " : "") + "Item 2: " + selectedItems[1]);
         };
-        refreshSelections.run();
 
         Panel bodyRow = new Panel(new GridLayout(3));
         bodyRow.addComponent(buildItemCard("Potion", "potion", "Heal 100 HP", cardWidth, selectedItems, activeSlot, refreshSelections));
@@ -96,19 +93,17 @@ public class ItemSelectionScreen {
         panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
         Panel selectionPanel = new Panel(new LinearLayout());
-        selectionPanel.addComponent(DialogComposer.centered(activeSlotLabel));
-        selectionPanel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-        selectionPanel.addComponent(DialogComposer.centered(item1Label));
-        selectionPanel.addComponent(DialogComposer.centered(item2Label));
-        selectionPanel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-        selectionPanel.addComponent(DialogComposer.centered(new Button("Edit Item 1", () -> {
+        item1Btn[0] = new Button("", () -> {
             activeSlot[0] = 0;
             refreshSelections.run();
-        })));
-        selectionPanel.addComponent(DialogComposer.centered(new Button("Edit Item 2", () -> {
+        });
+        item2Btn[0] = new Button("", () -> {
             activeSlot[0] = 1;
             refreshSelections.run();
-        })));
+        });
+        refreshSelections.run();
+        selectionPanel.addComponent(DialogComposer.centered(item1Btn[0]));
+        selectionPanel.addComponent(DialogComposer.centered(item2Btn[0]));
         selectionPanel.addComponent(DialogComposer.centered(new Button("Clear Active Slot", () -> {
             selectedItems[activeSlot[0]] = NONE;
             refreshSelections.run();
