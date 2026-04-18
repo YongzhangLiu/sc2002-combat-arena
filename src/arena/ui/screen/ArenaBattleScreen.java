@@ -57,6 +57,7 @@ public class ArenaBattleScreen {
     private int playerDamageOffset = 0;
     private int[] enemyDamageOffsets = new int[0];
     private ResizeHandler resizeHandler;
+    private Button basicAttackButton;
 
     public ArenaBattleScreen() {
         this.layoutCalculator = new ArenaLayoutCalculator();
@@ -101,6 +102,9 @@ public class ArenaBattleScreen {
         this.lastLayoutBounds = layoutCalculator.calculate(resolveLayoutSize());
 
         window.setComponent(buildSkeletonPanel(lastLayoutBounds, state));
+        if (basicAttackButton != null) {
+            window.setFocusedInteractable(basicAttackButton);
+        }
         if (!window.isVisible()) {
             gui.addWindow(window);
         }
@@ -114,6 +118,9 @@ public class ArenaBattleScreen {
         this.lastRenderedState = state;
         this.lastLayoutBounds = layoutCalculator.calculate(resolveLayoutSize());
         window.setComponent(buildSkeletonPanel(lastLayoutBounds, state));
+        if (basicAttackButton != null) {
+            window.setFocusedInteractable(basicAttackButton);
+        }
         gui.addWindowAndWait(window);
     }
 
@@ -373,9 +380,10 @@ public class ArenaBattleScreen {
 
         int targetIdx = getSelectedTargetIndex(state.getAliveEnemies().size());
 
-        row.addComponent(createSafeButton(fittedLine("Basic Attack", buttonWidth), () -> {
+        basicAttackButton = createSafeButton(fittedLine("Basic Attack", buttonWidth), () -> {
             if (callbacks != null) callbacks.onBasicAttack(targetIdx);
-        }));
+        });
+        row.addComponent(basicAttackButton);
         row.addComponent(createSafeButton(fittedLine("Defend", buttonWidth), () -> {
             if (callbacks != null) callbacks.onDefend();
         }));
