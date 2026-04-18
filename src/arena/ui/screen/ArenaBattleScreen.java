@@ -240,7 +240,7 @@ public class ArenaBattleScreen {
         base.setSize(new com.googlecode.lanterna.TerminalSize(rect.width(), rect.height()));
         wrapper.addComponent(base);
 
-        int buttonRow = bodyRows;
+        int buttonRow = bodyRows - 4;
         com.googlecode.lanterna.gui2.Button item1Btn = createInfoButton("(i)", () -> {
             String slot1Desc = getItemDescriptionAt(state, 0);
             showInfoDialog("Item 1", slot1Name, slot1Desc);
