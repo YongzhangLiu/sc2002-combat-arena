@@ -629,6 +629,7 @@ public class ArenaBattleScreen {
                     "Speed: " + enemy.getSpeed()
                 );
             });
+            infoBtn.setLayoutData(com.googlecode.lanterna.gui2.LinearLayout.createLayoutData(com.googlecode.lanterna.gui2.LinearLayout.Alignment.Beginning));
             content.addComponent(infoBtn);
         }
 
