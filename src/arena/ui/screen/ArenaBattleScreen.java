@@ -113,7 +113,7 @@ public class ArenaBattleScreen {
         
         Panel p = new Panel(new LinearLayout(Direction.VERTICAL));
         Label titleLabel = new Label(title);
-        titleLabel.setForegroundColor(TextColor.ANSI.CYAN);
+        // titleLabel.setForegroundColor(TextColor.ANSI.CYAN);
         p.addComponent(titleLabel.setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center)));
         p.addComponent(new Label(description));
         p.addComponent(new Label(stats));
@@ -989,7 +989,10 @@ public class ArenaBattleScreen {
         BasicWindow itemWindow = new BasicWindow();
         itemWindow.setHints(java.util.Arrays.asList(Window.Hint.CENTERED, Window.Hint.NO_DECORATIONS, Window.Hint.NO_POST_RENDERING));
         Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
-        panel.addComponent(new Label("Choose item to use"));
+        
+        Label titleLabel = new Label("Choose Item");
+        // titleLabel.setForegroundColor(TextColor.ANSI.CYAN);
+        panel.addComponent(titleLabel.setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center)));
         panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
         for (int i = 0; i < state.getAvailableItems().size(); i++) {
@@ -1002,8 +1005,11 @@ public class ArenaBattleScreen {
         }
 
         panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-        panel.addComponent(new Button("Cancel", itemWindow::close));
-        itemWindow.setComponent(panel);
+        panel.addComponent(new Button("Cancel", itemWindow::close).setLayoutData(LinearLayout.createLayoutData(LinearLayout.Alignment.Center)));
+        
+        arena.ui.util.CustomBorder customBorder = new arena.ui.util.CustomBorder(asciiMode);
+        customBorder.setComponent(panel);
+        itemWindow.setComponent(customBorder);
         gui.addWindowAndWait(itemWindow);
     }
 
