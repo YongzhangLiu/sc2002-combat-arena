@@ -58,15 +58,15 @@ public final class CustomModeSetupScreen {
     private static Panel buildSelectionPanel(boolean asciiMode, TerminalSize dialogSize, GameSetup setup, int[] result, BasicWindow window) {
         int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
         String[] infoLines = fittedLines(
-            "Pick your opponent for 1v1 custom duel.\n"
-                + "Warrior/Wizard opponents use items and full AI; Goblin/Wolf use standard enemy AI.\n"
-                + "QTE: timing bar for Basic Attack only (when enabled).\n",
+                  "Pick your opponent for 1v1 duel:               \n"
+                + "Warrior/Wizard opponents use items and full AI \n"
+                + "Goblin/Wolf use standard enemy AI              \n",
             Math.max(1, dialogSize.getRows() - 22),
             contentWidth
         );
 
         Panel panel = new Panel(new LinearLayout());
-        int mainContentRows = 24;
+        int mainContentRows = 22;
         DialogComposer.addVerticalPaddingTop(panel, dialogSize.getRows(), mainContentRows);
 
         String headerLine = fittedLine(DialogComposer.formatDialogHeader("CUSTOM DUEL", asciiMode), contentWidth);
@@ -81,16 +81,19 @@ public final class CustomModeSetupScreen {
         panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
         Label summary = new Label("");
+        final Button[] qteButton = new Button[1];
         Runnable refreshSummary = () -> {
             String opp = setup.customOpponentType != null ? setup.customOpponentType : "Random";
-            String qte = setup.customQteEnabled ? "On" : "Off";
-            summary.setText(fittedLine("Opponent: " + opp + "   |   QTE: " + qte, contentWidth));
+            summary.setText(fittedLine("Opponent: " + opp, contentWidth));
+            qteButton[0].setLabel("QTE: " + (setup.customQteEnabled ? "On" : "Off"));
         };
+        qteButton[0] = new Button("QTE: On", () -> {
+            setup.customQteEnabled = !setup.customQteEnabled;
+            refreshSummary.run();
+        });
         refreshSummary.run();
         panel.addComponent(DialogComposer.centered(summary));
-        panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
-        panel.addComponent(DialogComposer.centered(new Label(fittedLine("Opponent type", contentWidth))));
         panel.addComponent(DialogComposer.centered(opponentButton("Warrior", setup, refreshSummary)));
         panel.addComponent(DialogComposer.centered(opponentButton("Wizard", setup, refreshSummary)));
         panel.addComponent(DialogComposer.centered(opponentButton("Goblin", setup, refreshSummary)));
@@ -98,14 +101,8 @@ public final class CustomModeSetupScreen {
         panel.addComponent(DialogComposer.centered(opponentButton("Random", setup, refreshSummary)));
         panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
-        panel.addComponent(DialogComposer.centered(new Button("QTE: On", () -> {
-            setup.customQteEnabled = true;
-            refreshSummary.run();
-        })));
-        panel.addComponent(DialogComposer.centered(new Button("QTE: Off", () -> {
-            setup.customQteEnabled = false;
-            refreshSummary.run();
-        })));
+        panel.addComponent(DialogComposer.centered(new Label(fittedLine("QTE: timing bar for Basic Attack", contentWidth))));
+        panel.addComponent(DialogComposer.centered(qteButton[0]));
         panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
         panel.addComponent(DialogComposer.centered(new Button("Confirm", () -> {
