@@ -220,6 +220,7 @@ public class ArenaBattleScreen {
         col3Lines.add(fittedLine(skillStatus, columnWidth));
 
         int bodyRows = Math.max(1, rect.height() - 2);
+
         List<String> body = new ArrayList<>();
         for (int row = 0; row < bodyRows; row++) {
             String c1 = row < col1Lines.size() ? col1Lines.get(row) : "";
@@ -239,34 +240,24 @@ public class ArenaBattleScreen {
         base.setSize(new com.googlecode.lanterna.TerminalSize(rect.width(), rect.height()));
         wrapper.addComponent(base);
 
-        int itemInfoRow = Math.min(bodyRows - 1, 1);
-        com.googlecode.lanterna.gui2.Button itemsInfo = createInfoButton("(i)", () -> {
+        int buttonRow = bodyRows;
+        com.googlecode.lanterna.gui2.Button item1Btn = createInfoButton("(i)", () -> {
             String slot1Desc = getItemDescriptionAt(state, 0);
-            String slot2Desc = getItemDescriptionAt(state, 1);
-            showInfoDialog(
-                "Inventory Items",
-                "Item 1: " + slot1Name + "\nItem 2: " + slot2Name,
-                "Item 1: " + slot1Desc + "\nItem 2: " + slot2Desc
-            );
+            showInfoDialog("Item 1", slot1Name, slot1Desc);
         });
-        itemsInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + Math.max(0, columnWidth / 2 - 2), 1 + itemInfoRow));
-        itemsInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
-        wrapper.addComponent(itemsInfo);
+        item1Btn.setPosition(new com.googlecode.lanterna.TerminalPosition(1, 1 + buttonRow));
+        item1Btn.setSize(new com.googlecode.lanterna.TerminalSize(3, 1));
+        wrapper.addComponent(item1Btn);
 
-        com.googlecode.lanterna.gui2.Button item2Info = createInfoButton("(i)", () -> {
+        com.googlecode.lanterna.gui2.Button item2Btn = createInfoButton("(i)", () -> {
             String slot2Desc = getItemDescriptionAt(state, 1);
-            showInfoDialog(
-                "Item 2",
-                slot2Name,
-                slot2Desc
-            );
+            showInfoDialog("Item 2", slot2Name, slot2Desc);
         });
-        int item2Col = 1 + (columnWidth + spacer) * 1;
-        item2Info.setPosition(new com.googlecode.lanterna.TerminalPosition(item2Col + Math.max(0, columnWidth / 2 - 2), 1 + itemInfoRow));
-        item2Info.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
-        wrapper.addComponent(item2Info);
+        item2Btn.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + columnWidth + 1, 1 + buttonRow));
+        item2Btn.setSize(new com.googlecode.lanterna.TerminalSize(3, 1));
+        wrapper.addComponent(item2Btn);
 
-        com.googlecode.lanterna.gui2.Button skillInfo = createInfoButton("(i)", () -> {
+        com.googlecode.lanterna.gui2.Button skillBtn = createInfoButton("(i)", () -> {
             String skillTitle = getSkillDisplayName(state);
             String skillDescription = state.getSpecialSkillDescription() != null && !state.getSpecialSkillDescription().isBlank()
                 ? state.getSpecialSkillDescription()
@@ -280,11 +271,9 @@ public class ArenaBattleScreen {
             }
             showInfoDialog(skillTitle, skillDescription, cooldownText);
         });
-        int skillLabelRow = Math.min(bodyRows - 1, 5);
-        int skillIconColumn = 1 + (columnWidth * 2) + Math.max(0, columnWidth / 2 - 2);
-        skillInfo.setPosition(new com.googlecode.lanterna.TerminalPosition(skillIconColumn, 1 + skillLabelRow));
-        skillInfo.setSize(new com.googlecode.lanterna.TerminalSize(5, 1));
-        wrapper.addComponent(skillInfo);
+        skillBtn.setPosition(new com.googlecode.lanterna.TerminalPosition(1 + (columnWidth * 2) + 1, 1 + buttonRow));
+        skillBtn.setSize(new com.googlecode.lanterna.TerminalSize(3, 1));
+        wrapper.addComponent(skillBtn);
 
         wrapper.setPreferredSize(new com.googlecode.lanterna.TerminalSize(rect.width(), rect.height()));
         return wrapper;
