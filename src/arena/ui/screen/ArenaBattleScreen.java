@@ -396,9 +396,23 @@ public class ArenaBattleScreen {
         return row;
     }
 
-    // Strip `< >` wrapping in buttons and reapply theming
     private Button createInfoButton(String label, Runnable action) {
-        Button b = createSafeButton(label, action);
+        Button b = new Button(label, action);
+        b.setRenderer(new com.googlecode.lanterna.gui2.Button.ButtonRenderer() {
+            @Override
+            public com.googlecode.lanterna.TerminalSize getPreferredSize(Button button) {
+                return new com.googlecode.lanterna.TerminalSize(com.googlecode.lanterna.TerminalTextUtils.getColumnWidth(button.getLabel()), 1);
+            }
+            @Override
+            public void drawComponent(com.googlecode.lanterna.gui2.TextGUIGraphics graphics, Button button) {
+                graphics.applyThemeStyle(button.getThemeDefinition().getNormal());
+                graphics.putString(0, 0, button.getLabel());
+            }
+            @Override
+            public com.googlecode.lanterna.TerminalPosition getCursorLocation(Button button) {
+                return com.googlecode.lanterna.TerminalPosition.TOP_LEFT_CORNER;
+            }
+        });
         b.setLayoutData(com.googlecode.lanterna.gui2.LinearLayout.createLayoutData(com.googlecode.lanterna.gui2.LinearLayout.Alignment.Center));
         return b;
     }
