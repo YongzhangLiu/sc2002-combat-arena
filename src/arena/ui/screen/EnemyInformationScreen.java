@@ -18,6 +18,7 @@ import arena.model.combatant.Combatant;
 import arena.model.combatant.Goblin;
 import arena.model.combatant.Wolf;
 import arena.ui.util.DialogComposer;
+import arena.ui.util.ResizeHandler;
 import static arena.ui.util.ScreenUtil.addSpriteLines;
 import static arena.ui.util.ViewMapperUtil.combatantStatBlock;
 import static arena.ui.util.TextFormatUtil.fittedLine;
@@ -34,8 +35,25 @@ public class EnemyInformationScreen {
         TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
         window.setFixedSize(dialogSize);
 
-        int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
         final int[] result = {0};
+
+        Panel panel = buildSelectionPanel(asciiMode, dialogSize, result, window);
+        window.setComponent(panel);
+
+        ResizeHandler resizeHandler = ResizeHandler.attach(screen, gui, newSize -> {
+            TerminalSize newSizeDialog = dialogSizeForScreen(screen, fullScreen);
+            window.setFixedSize(newSizeDialog);
+            Panel newPanel = buildSelectionPanel(asciiMode, newSizeDialog, result, window);
+            window.setComponent(newPanel);
+        });
+
+        gui.addWindowAndWait(window);
+        resizeHandler.detach();
+        return result[0];
+    }
+
+    private static Panel buildSelectionPanel(boolean asciiMode, TerminalSize dialogSize, int[] result, BasicWindow window) {
+        int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
 
         Panel panel = new Panel(new LinearLayout());
         
@@ -66,9 +84,7 @@ public class EnemyInformationScreen {
         
         DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), mainContentRows);
 
-        window.setComponent(panel);
-        gui.addWindowAndWait(window);
-        return result[0];
+        return panel;
     }
 
     private static Panel buildEnemyCard(String enemyName, String spriteName, TerminalSize dialogSize) {

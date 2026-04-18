@@ -14,6 +14,7 @@ import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.TerminalSize;
 
 import arena.ui.util.DialogComposer;
+import arena.ui.util.ResizeHandler;
 import arena.ui.GameSetup;
 import static arena.ui.util.TextFormatUtil.fittedLine;
 import static arena.ui.util.TextFormatUtil.fittedLines;
@@ -32,6 +33,24 @@ public class DifficultySelectionScreen {
         TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
         window.setFixedSize(dialogSize);
 
+        final int[] result = {0};
+        
+        Panel panel = buildSelectionPanel(asciiMode, dialogSize, setup, result, window);
+        window.setComponent(panel);
+
+        ResizeHandler resizeHandler = ResizeHandler.attach(screen, gui, newSize -> {
+            TerminalSize newSizeDialog = dialogSizeForScreen(screen, fullScreen);
+            window.setFixedSize(newSizeDialog);
+            Panel newPanel = buildSelectionPanel(asciiMode, newSizeDialog, setup, result, window);
+            window.setComponent(newPanel);
+        });
+
+        gui.addWindowAndWait(window);
+        resizeHandler.detach();
+        return result[0];
+    }
+
+    private static Panel buildSelectionPanel(boolean asciiMode, TerminalSize dialogSize, GameSetup setup, int[] result, BasicWindow window) {
         int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
         String[] infoLines = fittedLines(
             "Choose level:\n"
@@ -43,7 +62,6 @@ public class DifficultySelectionScreen {
             contentWidth
         );
 
-        final int[] result = {0};
         Panel panel = new Panel(new LinearLayout());
         
         int mainContentRows = 20;
@@ -86,8 +104,6 @@ public class DifficultySelectionScreen {
         
         DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), mainContentRows);
 
-        window.setComponent(panel);
-        gui.addWindowAndWait(window);
-        return result[0];
+        return panel;
     }
 }

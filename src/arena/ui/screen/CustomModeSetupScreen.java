@@ -15,6 +15,7 @@ import com.googlecode.lanterna.screen.Screen;
 
 import arena.ui.GameSetup;
 import arena.ui.util.DialogComposer;
+import arena.ui.util.ResizeHandler;
 import static arena.ui.util.ScreenUtil.dialogSizeForScreen;
 import static arena.ui.util.TextFormatUtil.fittedLine;
 import static arena.ui.util.TextFormatUtil.fittedLines;
@@ -38,6 +39,23 @@ public final class CustomModeSetupScreen {
         window.setFixedSize(dialogSize);
 
         final int[] result = {0};
+        
+        Panel panel = buildSelectionPanel(asciiMode, dialogSize, setup, result, window);
+        window.setComponent(panel);
+
+        ResizeHandler resizeHandler = ResizeHandler.attach(screen, gui, newSize -> {
+            TerminalSize newSizeDialog = dialogSizeForScreen(screen, fullScreen);
+            window.setFixedSize(newSizeDialog);
+            Panel newPanel = buildSelectionPanel(asciiMode, newSizeDialog, setup, result, window);
+            window.setComponent(newPanel);
+        });
+
+        gui.addWindowAndWait(window);
+        resizeHandler.detach();
+        return result[0];
+    }
+
+    private static Panel buildSelectionPanel(boolean asciiMode, TerminalSize dialogSize, GameSetup setup, int[] result, BasicWindow window) {
         int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
         String[] infoLines = fittedLines(
             "Pick your opponent for 1v1 custom duel.\n"
@@ -100,9 +118,7 @@ public final class CustomModeSetupScreen {
         })));
 
         DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), mainContentRows);
-        window.setComponent(panel);
-        gui.addWindowAndWait(window);
-        return result[0];
+        return panel;
     }
 
     private static Button opponentButton(String type, GameSetup setup, Runnable refreshSummary) {

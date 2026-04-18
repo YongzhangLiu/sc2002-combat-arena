@@ -18,6 +18,7 @@ import arena.model.combatant.Combatant;
 import arena.model.combatant.Warrior;
 import arena.model.combatant.Wizard;
 import arena.ui.util.DialogComposer;
+import arena.ui.util.ResizeHandler;
 import arena.ui.GameSetup;
 import static arena.ui.util.ScreenUtil.addSpriteLines;
 import static arena.ui.util.ViewMapperUtil.combatantStatBlock;
@@ -38,9 +39,26 @@ public class PlayerSelectionScreen {
         TerminalSize dialogSize = dialogSizeForScreen(screen, fullScreen);
         window.setFixedSize(dialogSize);
 
+        final int[] result = {0};
+        
+        Panel panel = buildSelectionPanel(asciiMode, setup, dialogSize, result, window);
+        window.setComponent(panel);
+
+        ResizeHandler resizeHandler = ResizeHandler.attach(screen, gui, newSize -> {
+            TerminalSize newSizeDialog = dialogSizeForScreen(screen, fullScreen);
+            window.setFixedSize(newSizeDialog);
+            Panel newPanel = buildSelectionPanel(asciiMode, setup, newSizeDialog, result, window);
+            window.setComponent(newPanel);
+        });
+
+        gui.addWindowAndWait(window);
+        resizeHandler.detach();
+        return result[0];
+    }
+
+    private static Panel buildSelectionPanel(boolean asciiMode, GameSetup setup, TerminalSize dialogSize, int[] result, BasicWindow window) {
         int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
 
-        final int[] result = {0};
         Panel panel = new Panel(new LinearLayout());
         
         int mainContentRows = 24;
@@ -66,9 +84,7 @@ public class PlayerSelectionScreen {
         
         DialogComposer.addVerticalPaddingBottom(panel, dialogSize.getRows(), mainContentRows);
 
-        window.setComponent(panel);
-        gui.addWindowAndWait(window);
-        return result[0];
+        return panel;
     }
 
     private static Panel buildPlayerCard(String className, GameSetup setup, TerminalSize dialogSize, int[] result, BasicWindow window) {

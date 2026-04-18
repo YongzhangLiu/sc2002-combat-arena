@@ -10,6 +10,7 @@ import arena.ui.screen.ArenaBattleScreen;
 import arena.ui.screen.ArenaPreviewStateFactory;
 import arena.ui.sprite.AsciiSprite;
 import arena.ui.sprite.SpriteCatalog;
+import arena.ui.util.ResizeHandler;
 import com.googlecode.lanterna.bundle.LanternaThemes;
 import com.googlecode.lanterna.TerminalSize;
 import com.googlecode.lanterna.TextColor;
@@ -111,61 +112,22 @@ public class StartMenu {
                 window.setFixedSize(activeWindowSize);
             }
 
-            Panel panel = new Panel(new LinearLayout());
-            int mainContentRows = 15;
-            DialogComposer.addVerticalPaddingTop(panel, viewportRows, mainContentRows);
-
-            try {
-                AsciiSprite titleSprite = SpriteCatalog.loadExact("branding", "title.txt");
-                for (String line : titleSprite.getLines()) {
-                    panel.addComponent(DialogComposer.centered(new Label(line)));
-                }
-            } catch (IOException e) {
-                // Fallback if branding file is missing
-                int mainBorderWidth = Math.max(8, Math.min(30, viewportColumns - 2));
-                panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(mainBorderWidth, config.asciiMode))));
-                panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("COMBAT  ARENA", mainBorderWidth, config.asciiMode))));
-                panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(mainBorderWidth, config.asciiMode))));
-            }
-            
-            panel.addComponent(new EmptySpace(new TerminalSize(1, 2)));
-
-            // panel.addComponent(DialogComposer.centered(new Label("Display: " + (config.fullScreen ? "Fullscreen" : "Windowed"))));
-            // panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
-
-            panel.addComponent(DialogComposer.centered(new Button("New Game", () -> {
-                BasicWindow backdrop = createSetupBackdrop(screen, config.fullScreen);
-                gui.addWindow(backdrop);
-                window.setVisible(false);
-                try {
-                    startNewGameFlow(screen, gui, config.fullScreen, config.asciiMode, onSetupReady);
-                } finally {
-                    backdrop.close();
-                    window.setVisible(true);
-                }
-            })));
-            panel.addComponent(DialogComposer.centered(new Button("View Controls", () -> {
-                showMessage(screen, gui, config.fullScreen, config.asciiMode, "CONTROLS",
-                        "- Up/Down: Navigate\n" +
-                        "- Mouse: Click buttons\n" +
-                        "- Enter: Confirm\n" +
-                        "- Esc: Back/Close");
-            })));
-            panel.addComponent(DialogComposer.centered(new Button("Options", () -> {
-                openOptions(screen, gui, config, result);
-                if (result.restartRequested) {
-                    window.close();
-                }
-            })));
-            panel.addComponent(DialogComposer.centered(new Button("Exit", () -> {
-                result.exitRequested = true;
-                window.close();
-            })));
-            DialogComposer.addVerticalPaddingBottom(panel, viewportRows, mainContentRows);
-
+            Panel panel = buildMainMenuPanel(screen, gui, config, result, viewportRows, viewportColumns, onSetupReady);
             window.setComponent(panel);
 
+            ResizeHandler resizeHandler = ResizeHandler.attach(screen, gui, newSize -> {
+                TerminalSize newWindowSize = config.fullScreen
+                    ? newSize
+                    : fitToTerminal(newSize, WINDOWED_SIZE);
+                if (!config.fullScreen) {
+                    window.setFixedSize(newWindowSize);
+                }
+                Panel newPanel = buildMainMenuPanel(screen, gui, config, result, newWindowSize.getRows(), newWindowSize.getColumns(), onSetupReady);
+                window.setComponent(newPanel);
+            });
+
             gui.addWindowAndWait(window);
+            resizeHandler.detach();
         } finally {
             if (ownsTerminal && screen != null) {
                 ScreenUtil.setMouseReporting(screen, false);
@@ -213,6 +175,54 @@ public class StartMenu {
 
         optionsWindow.setComponent(optionsPanel);
         gui.addWindowAndWait(optionsWindow);
+    }
+
+    private static Panel buildMainMenuPanel(Screen screen, MultiWindowTextGUI gui, UiConfig config, SessionResult result, int viewportRows, int viewportColumns, Consumer<GameStartRequest> onSetupReady) {
+        Panel panel = new Panel(new LinearLayout());
+        int mainContentRows = 15;
+        DialogComposer.addVerticalPaddingTop(panel, viewportRows, mainContentRows);
+
+        try {
+            AsciiSprite titleSprite = SpriteCatalog.loadExact("branding", "title.txt");
+            for (String line : titleSprite.getLines()) {
+                panel.addComponent(DialogComposer.centered(new Label(line)));
+            }
+        } catch (IOException e) {
+            int mainBorderWidth = Math.max(8, Math.min(30, viewportColumns - 2));
+            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatTopBorder(mainBorderWidth, config.asciiMode))));
+            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatMiddleBorder("COMBAT  ARENA", mainBorderWidth, config.asciiMode))));
+            panel.addComponent(DialogComposer.centered(new Label(DialogComposer.formatBottomBorder(mainBorderWidth, config.asciiMode))));
+        }
+        
+        panel.addComponent(new EmptySpace(new TerminalSize(1, 2)));
+
+        panel.addComponent(DialogComposer.centered(new Button("New Game", () -> {
+            BasicWindow backdrop = createSetupBackdrop(screen, config.fullScreen);
+            gui.addWindow(backdrop);
+            try {
+                startNewGameFlow(screen, gui, config.fullScreen, config.asciiMode, onSetupReady);
+            } finally {
+                backdrop.close();
+            }
+        })));
+        panel.addComponent(DialogComposer.centered(new Button("View Controls", () -> {
+            showMessage(screen, gui, config.fullScreen, config.asciiMode, "CONTROLS",
+                    "- Up/Down: Navigate\n" +
+                    "- Mouse: Click buttons\n" +
+                    "- Enter: Confirm\n" +
+                    "- Esc: Back/Close");
+        })));
+        panel.addComponent(DialogComposer.centered(new Button("Options", () -> {
+            openOptions(screen, gui, config, result);
+            if (result.restartRequested) {
+            }
+        })));
+        panel.addComponent(DialogComposer.centered(new Button("Exit", () -> {
+            result.exitRequested = true;
+        })));
+        DialogComposer.addVerticalPaddingBottom(panel, viewportRows, mainContentRows);
+
+        return panel;
     }
 
     private static void showMessage(Screen screen, MultiWindowTextGUI gui, boolean fullScreen, boolean asciiMode, String title, String text) {
