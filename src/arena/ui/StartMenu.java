@@ -112,7 +112,7 @@ public class StartMenu {
                 window.setFixedSize(activeWindowSize);
             }
 
-            Panel panel = buildMainMenuPanel(screen, gui, config, result, viewportRows, viewportColumns, onSetupReady);
+            Panel panel = buildMainMenuPanel(screen, gui, config, result, viewportRows, viewportColumns, onSetupReady, window);
             window.setComponent(panel);
 
             ResizeHandler resizeHandler = ResizeHandler.attach(screen, gui, newSize -> {
@@ -122,7 +122,7 @@ public class StartMenu {
                 if (!config.fullScreen) {
                     window.setFixedSize(newWindowSize);
                 }
-                Panel newPanel = buildMainMenuPanel(screen, gui, config, result, newWindowSize.getRows(), newWindowSize.getColumns(), onSetupReady);
+                Panel newPanel = buildMainMenuPanel(screen, gui, config, result, newWindowSize.getRows(), newWindowSize.getColumns(), onSetupReady, window);
                 window.setComponent(newPanel);
             });
 
@@ -177,7 +177,7 @@ public class StartMenu {
         gui.addWindowAndWait(optionsWindow);
     }
 
-    private static Panel buildMainMenuPanel(Screen screen, MultiWindowTextGUI gui, UiConfig config, SessionResult result, int viewportRows, int viewportColumns, Consumer<GameStartRequest> onSetupReady) {
+    private static Panel buildMainMenuPanel(Screen screen, MultiWindowTextGUI gui, UiConfig config, SessionResult result, int viewportRows, int viewportColumns, Consumer<GameStartRequest> onSetupReady, BasicWindow window) {
         Panel panel = new Panel(new LinearLayout());
         int mainContentRows = 15;
         DialogComposer.addVerticalPaddingTop(panel, viewportRows, mainContentRows);
@@ -219,6 +219,7 @@ public class StartMenu {
         })));
         panel.addComponent(DialogComposer.centered(new Button("Exit", () -> {
             result.exitRequested = true;
+            window.close();
         })));
         DialogComposer.addVerticalPaddingBottom(panel, viewportRows, mainContentRows);
 
