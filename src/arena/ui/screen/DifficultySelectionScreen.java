@@ -12,6 +12,8 @@ import com.googlecode.lanterna.gui2.Panel;
 import com.googlecode.lanterna.gui2.Window;
 import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.TerminalSize;
+import com.googlecode.lanterna.TextColor;
+import com.googlecode.lanterna.TerminalPosition;
 
 import arena.ui.util.DialogComposer;
 import arena.ui.util.ResizeHandler;
@@ -53,11 +55,11 @@ public class DifficultySelectionScreen {
     private static Panel buildSelectionPanel(boolean asciiMode, TerminalSize dialogSize, GameSetup setup, int[] result, BasicWindow window) {
         int contentWidth = Math.max(8, dialogSize.getColumns() - 4);
         String[] infoLines = fittedLines(
-            "Choose level:\n"
-                + "Easy: 3 enemies (3 Goblins)\n"
-                + "Medium: 4 enemies total (1 Goblin + 1 Wolf, then 2 Wolves)\n"
-                + "Hard: 5 enemies total (2 Goblins, then 1 Goblin + 2 Wolves)\n"
-                + "Custom: 1v1 — next screen: pick opponent (Warrior/Wizard/Goblin/Wolf/Random) + QTE on/off\n",
+                  "Choose level:                                             \n"
+                + "Easy:   3 enemies       (3 Goblins)                       \n"
+                + "Medium: 4 enemies total (1 Goblin + 1 Wolf -> 2 Wolves)   \n"
+                + "Hard:   5 enemies total (2 Goblins -> 1 Goblin + 2 Wolves)\n"
+                + "Custom: 1v1 duel mode                                     \n",
             Math.max(1, dialogSize.getRows() - 14),
             contentWidth
         );
