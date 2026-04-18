@@ -17,6 +17,9 @@ import com.googlecode.lanterna.gui2.MultiWindowTextGUI;
 import com.googlecode.lanterna.gui2.Panel;
 import com.googlecode.lanterna.gui2.Window;
 import com.googlecode.lanterna.screen.Screen;
+import com.googlecode.lanterna.screen.TerminalScreen;
+import com.googlecode.lanterna.terminal.Terminal;
+import com.googlecode.lanterna.terminal.TerminalResizeListener;
 import com.googlecode.lanterna.TextColor;
 
 import java.io.IOException;
@@ -54,6 +57,7 @@ public class ArenaBattleScreen {
     private boolean showInfoButtons = false;
     private int playerDamageOffset = 0;
     private int[] enemyDamageOffsets = new int[0];
+    private TerminalResizeListener resizeListener;
 
     public ArenaBattleScreen() {
         this.layoutCalculator = new ArenaLayoutCalculator();
@@ -80,6 +84,28 @@ public class ArenaBattleScreen {
             this.windowedLayoutSize = fitToTerminal(screen.getTerminalSize(), WINDOWED_SIZE);
             window.setFixedSize(this.windowedLayoutSize);
         }
+
+        setupResizeListener();
+    }
+
+    private void setupResizeListener() {
+        if (!(screen instanceof TerminalScreen terminalScreen)) {
+            return;
+        }
+        Terminal terminal = terminalScreen.getTerminal();
+        if (terminal == null) {
+            return;
+        }
+        resizeListener = new TerminalResizeListener() {
+            @Override
+            public void onResized(Terminal terminal, TerminalSize newSize) {
+                if (lastRenderedState != null && window != null && window.isVisible()) {
+                    lastLayoutBounds = layoutCalculator.calculate(newSize);
+                    window.setComponent(buildSkeletonPanel(lastLayoutBounds, lastRenderedState));
+                }
+            }
+        };
+        terminal.addResizeListener(resizeListener);
     }
 
     public void render(ArenaViewState state) {
@@ -130,9 +156,21 @@ public class ArenaBattleScreen {
     }
 
     public void close() {
+        removeResizeListener();
         if (window != null) {
             window.close();
         }
+    }
+
+    private void removeResizeListener() {
+        if (resizeListener == null || !(screen instanceof TerminalScreen terminalScreen)) {
+            return;
+        }
+        Terminal terminal = terminalScreen.getTerminal();
+        if (terminal != null) {
+            terminal.removeResizeListener(resizeListener);
+        }
+        resizeListener = null;
     }
 
     /**
