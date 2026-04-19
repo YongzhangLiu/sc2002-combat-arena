@@ -14,12 +14,12 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║   WARRIOR    vs    GOBLIN · WOLF · DRAGON · WIZARD · ???     ║
+║   WARRIOR    vs                GOBLIN · WOLF                 ║
 ║   ──────           ─────────────────────────────────────     ║
 ║   HP 260           Use your wits. Use your items.            ║
 ║   ATK  40          One wrong move and the run is over.       ║
 ║   DEF  20                                                    ║
-║   SPD  30                [ PRESS ENTER ]                     ║
+║   SPD  30                    [ PRESS ENTER ]                 ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
