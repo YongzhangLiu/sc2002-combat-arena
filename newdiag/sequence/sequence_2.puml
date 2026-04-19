@@ -2,56 +2,133 @@
 hide footbox
 title Scenario 2: Player Turn — Warrior Defends Against Goblin's Next Attack
 
-participant "ArenaBattleScreen" as Screen
-participant "GameApp" as App
-participant "BattleEngine" as Engine
-participant "PlayerAction" as PA
-participant "Defend" as Defend
-participant "DefendBuff" as Buff
-participant "Warrior" as Warrior
-participant "GameState" as State
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
 
-note over Screen, State
-  Scenarios 2 and 3 occur within the same executePlayerTurn() call.
-  Warrior (SPD 30) acts first → defends.
-  Goblin (SPD 25) acts second → attacks with reduced damage (Scenario 3).
-  This diagram focuses on the Warrior (player) phase.
+actor       "User"                        as User
+boundary    "ArenaBattleScreen"           as Screen
+control     "GameApp\n<<ActionCallbacks>>" as App
+control     "BattleEngine"                as Engine
+control     "PlayerAction"                as PA
+entity      "Defend\n<<Action>>"          as Defend
+entity      "DefendBuff\n<<StatusEffect>>" as Buff
+entity      "Warrior\n<<Player>>"         as Warrior
+entity      "GameState\n<<Static>>"       as State
+
+note over User, State
+  Turn order (SpeedBasedTurnOrder): Warrior SPD=30 acts before Goblin SPD=25.
+  Scenarios 2 and 3 are part of the same executePlayerTurn() call.
+  This diagram covers the Warrior (player) phase.
 end note
 
-Screen -> App : onDefend()
-App -> Engine : executePlayerTurn(2, 0, null, 1.0)
-Engine -> State : getPlayer() → Warrior
-Engine -> State : getCurrentWave() → [Goblin]
+' ── User Input ──────────────────────────────────────────────────
+User -> Screen : clicks "Defend" button
+note right of User
+  User sees the action bar rendered
+  by buildActionBar() and selects Defend.
+  Input: button click → "Defend"
+end note
 
-note over Engine : Iterating turnOrderSnapshot...\nProcessing: Warrior (Player)
+' ── UI → Callback → Engine ──────────────────────────────────────
+Screen -> App : callbacks.onDefend()
+note right of Screen
+  Button is wired in buildActionBar():
+  createSafeButton("Defend", () -> callbacks.onDefend())
+  Translates button click → method call
+end note
+
+App -> Engine : executePlayerTurn(choice=2, target=0, item=null)
+note right of App
+  GameApp.onDefend() translates the
+  callback into engine choice code:
+  choice=2 → "Defend" branch
+end note
+
+' ── Engine: Setup ───────────────────────────────────────────────
+Engine -> State : getPlayer()
+State --> Engine : Warrior
+Engine -> State : getCurrentWave()
+State --> Engine : [Goblin]
+Engine -> State : getTurnOrder()
+State --> Engine : [Warrior (SPD 30), Goblin (SPD 25)]
+
+' ── Engine: Warrior Phase ───────────────────────────────────────
+note over Engine : Processing turn order snapshot...\nCurrent combatant: Warrior (instanceof Player)
 
 Engine -> Warrior : beginTurn()
-note over Warrior : No active effects\ncanAct = true
+note over Warrior
+  Iterates activeEffects (empty this turn)
+  canAct = true → returns true
+end note
 Warrior --> Engine : true
 
 Engine -> Engine : executeChosenPlayerAction(choice=2, ...)
+note right of Engine
+  switch(choice):
+  case 2 → playerAction.defend(warrior)
+end note
+
+' ── PlayerAction → Defend ───────────────────────────────────────
 Engine -> PA : defend(warrior)
 PA -> Defend : new Defend()
 PA -> Defend : execute(warrior, tempEnemy, tempList)
+
 Defend -> Warrior : isAlive()
 Warrior --> Defend : true
+
 Defend -> Buff : new DefendBuff()
-note over Buff : turns = 2\ndefenseBoost = 10
+note right of Buff
+  Default constructor:
+  turns = 2, defenseBoost = +10
+end note
+
 Defend -> Warrior : addStatusEffect(defendBuff)
 Warrior -> Buff : onApply(warrior)
-note over Warrior : defendBuff added to activeEffects
+note over Warrior
+  defendBuff added to activeEffects.
+  Next getDefense() call returns
+  baseDefense(20) + boost(10) = 30.
+end note
 
-Engine -> Engine : pendingTurnFrames.add(TurnFrame("Warrior defends."))
+Defend --> PA : done
+PA --> Engine : done
+
+' ── Engine: TurnFrame + Sweep ───────────────────────────────────
+Engine -> Engine : lastEnemyDamages = [0] (no enemy hp changed)
+Engine -> Engine : pendingTurnFrames.add(\n  TurnFrame("Warrior defends.", playerDmg=null, enemyDmgs=[0]))
 Engine -> Engine : sweepDeadEnemies()
+note over Engine : All enemies alive — nothing removed.
 
-note over Engine : Goblin phase follows next\n(see Scenario 3)
+' ── Engine: Goblin Phase (abbreviated) ─────────────────────────
+note over Engine
+  Goblin (Enemy) phase follows next in the same loop.
+  See Scenario 3 for the enemy phase detail.
+end note
 
-Engine -> State : checkEndCondition() → 0
+' ── End of Round ────────────────────────────────────────────────
+Engine -> State : checkEndCondition()
+State --> Engine : 0 (game continues)
 Engine -> Engine : endRound()
+note right of Engine
+  endRound():
+  - round++
+  - warrior.decrementCooldownAfterTurn()
+  - GameState.newTurnOrder()
+end note
 Engine --> App : 0 (continue)
 
+' ── GameApp renders result ──────────────────────────────────────
 App -> Engine : drainTurnFrames()
-Engine --> App : [TurnFrame("Warrior defends."), TurnFrame("Goblin attacks.", ...)]
-App -> Screen : render frames sequentially
+Engine --> App : [TurnFrame("Warrior defends."), TurnFrame("Goblin attacks.", dmg=5)]
+
+App -> Screen : render(ArenaViewState)
+note right of App
+  Each TurnFrame is rendered with a brief
+  delay for animation. The user sees:
+  1. "Warrior defends." (DefendBuff icon appears)
+  2. "Goblin attacks." (reduced floating damage on Warrior)
+end note
+
+Screen --> User : updated battle screen\n(DefendBuff icon, reduced HP bar)
 
 @enduml

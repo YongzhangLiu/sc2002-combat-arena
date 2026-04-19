@@ -11,6 +11,10 @@ skinparam package {
     BackgroundColor #FCE4EC
     BorderColor #880E4F
 }
+skinparam note {
+    BackgroundColor #FFFDE7
+    BorderColor #F9A825
+}
 
 hide empty members
 
@@ -34,7 +38,6 @@ package "arena.ui (entry)" {
     class StartMenu <<Static>> {
         + {static} launch(screen, gui, ..., onStart) : void
         + {static} applyUniformButtonTheme(gui) : void
-        note: orchestrates setup screens\nbefore handing off to GameApp
     }
 }
 
@@ -66,16 +69,9 @@ package "arena.ui.screen (battle)" {
         + onStartNewGame() : void
         + onQuit() : void
     }
-
-    note "Setup screens (PlayerSelection,\nItemSelection, Difficulty,\nEnemyInfo, CustomModeSetup)\norchestrated by StartMenu" as SetupNote
 }
 
 package "arena.ui.model (view state)" {
-
-    class ArenaViewStateMapper <<Static>> {
-        + {static} fromGameState(...) : ArenaViewState
-        note: reads GameState, maps to\nUI-safe view objects
-    }
 
     class ArenaViewState {
         + playerState : PlayerViewState
@@ -113,8 +109,36 @@ ArenaBattleScreen  -->  ArenaViewState   : renders
 
 EndgameScreen      ..>  EndgameCallbacks : uses
 
-ArenaViewStateMapper ..> ArenaViewState  : creates
-ArenaViewState       *-- PlayerViewState
-ArenaViewState       *-- EnemyViewState
+ArenaViewState     *--  PlayerViewState
+ArenaViewState     *--  EnemyViewState
+
+' ── Sticky notes ───────────────────────────────
+note as N_EXCL #FFFDE7
+  <b>Excluded from this diagram:</b>
+  arena.ui.sprite  — AsciiSprite, SpriteCatalog
+  arena.ui.util    — DialogComposer, CustomBorder,
+                     ScreenUtil, TextFormatUtil,
+                     ViewMapperUtil
+  arena.ui.screen  — setup screens (PlayerSelection,
+                     ItemSelection, DifficultySelection,
+                     EnemyInformation, CustomModeSetup),
+                     ArenaLayoutCalculator,
+                     ArenaPreviewStateFactory,
+                     TimingBarQteView
+  Also excluded:   ArenaViewStateMapper
+end note
+
+note as N_WHY #FFFDE7
+  <b>Why the UI is simplified here:</b>
+  The sprite and util packages are purely rendering
+  helpers with no domain or control-flow logic.
+  The setup screens are orchestrated by StartMenu
+  and do not interact with the engine directly.
+  ArenaViewStateMapper is an internal translation
+  layer — its structure adds no architectural insight
+  at this level. Showing these would obscure the key
+  relationships between GameApp, BattleEngine,
+  and the view-state model.
+end note
 
 @enduml

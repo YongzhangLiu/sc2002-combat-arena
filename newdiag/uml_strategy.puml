@@ -11,6 +11,10 @@ skinparam package {
     BackgroundColor #E3F2FD
     BorderColor #1565C0
 }
+skinparam note {
+    BackgroundColor #FFFDE7
+    BorderColor #F9A825
+}
 
 hide empty members
 
@@ -22,7 +26,6 @@ package "arena.strategy" {
 
     class SpeedBasedTurnOrder {
         + buildTurnOrder(players, enemies) : List<Combatant>
-        note: Player always first,\nthen enemies sorted by speed DESC
     }
 
     interface EnemyActionStrategy {
@@ -31,17 +34,30 @@ package "arena.strategy" {
 
     class BasicEnemyActionStrategy {
         + execute(enemy, players) : void
-        note: attacks the first alive player
     }
 }
 
 TurnOrderStrategy   <|..  SpeedBasedTurnOrder
 EnemyActionStrategy <|..  BasicEnemyActionStrategy
 
-note "Used by GameState.newTurnOrder()\nto rebuild turn queue each round" as N1
+note as N1 #FFFDE7
+  <b>SpeedBasedTurnOrder</b>
+  Merges all living players and enemies into one list
+  and sorts by speed in descending order.
+  The player does NOT always go first — a faster enemy
+  (e.g. Wolf SPD=35) will act before a Warrior (SPD=30).
+  GameState calls this at the start of every round via
+  newTurnOrder() to rebuild the queue.
+end note
 SpeedBasedTurnOrder .. N1
 
-note "Held by each Enemy instance.\nCalled by BattleEngine each enemy turn." as N2
+note as N2 #FFFDE7
+  <b>BasicEnemyActionStrategy</b>
+  Iterates the player list and attacks the first
+  alive player. Damage = max(0, ATK − target.DEF).
+  Held as a field on each Enemy instance and invoked
+  by BattleEngine during the enemy phase of every round.
+end note
 BasicEnemyActionStrategy .. N2
 
 @enduml

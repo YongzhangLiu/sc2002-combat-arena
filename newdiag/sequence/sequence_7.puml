@@ -2,22 +2,53 @@
 hide footbox
 title Scenario 7: Enemy Turn — Goblin Still Stunned, StunEffect Expires
 
-participant "BattleEngine" as Engine
-participant "Goblin" as Goblin
-participant "StunEffect" as Stun
-participant "GameState" as State
-participant "GameApp" as App
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
 
-note over Engine, App
-  Continuation of the same executePlayerTurn() call as Scenario 6.
+actor       "User"                         as User
+boundary    "ArenaBattleScreen"            as Screen
+control     "GameApp\n<<ActionCallbacks>>" as App
+control     "BattleEngine"                 as Engine
+entity      "Goblin\n<<Enemy>>"            as Goblin
+entity      "StunEffect\n<<StatusEffect>>" as Stun
+entity      "GameState\n<<Static>>"        as State
+
+note over User, State
+  This is the enemy phase of the same executePlayerTurn() call as Scenario 6.
   Goblin's StunEffect has remainingTurns=1 entering this turn.
-  Now processing: Goblin (SPD 25) in the enemy phase.
+  Goblin skips again, and this time the StunEffect expires and is removed.
 end note
 
+' ── User Input (same round as Scenario 6) ──────────────────────
+User -> Screen : clicks "Use Item" → selects Potion
+note right of User
+  Same user action that triggered Scenario 6.
+  Shown here for continuity — enemy phase
+  occurs in the same executePlayerTurn() call.
+end note
+
+Screen -> App : callbacks.onUseItem(itemIndex, targetIndex)
+App -> Engine : executePlayerTurn(choice=3, targetIndex, potion, 1.0)
+note right of App : choice=3 → Use Item branch (Scenario 6)
+
+note over Engine
+  Warrior phase: Potion used, healed 100 HP.
+  (See Scenario 6 for player phase detail.)
+  Now processing: Goblin (instanceof Enemy).
+end note
+
+' ── Goblin Phase — Stunned (final turn) ────────────────────────
 Engine -> Goblin : beginTurn()
-note over Goblin : Iterates activeEffects\ncalls StunEffect.onTurnStart(goblin)
+note over Goblin
+  Iterates activeEffects → finds StunEffect (turns=1).
+  Calls StunEffect.onTurnStart(goblin).
+end note
 Goblin -> Stun : onTurnStart(goblin)
-note over Stun : remainingTurns > 0\nremainingTurns-- (1→0)\nreturn true (skip turn)
+note over Stun
+  remainingTurns > 0
+  remainingTurns-- (1 → 0)
+  returns true → skip this turn
+end note
 Stun --> Goblin : true (skip turn)
 
 Goblin -> Stun : isExpired()
@@ -25,20 +56,39 @@ note over Stun : remainingTurns = 0 → true
 Stun --> Goblin : true
 
 Goblin -> Stun : onExpire(goblin)
-note over Goblin : StunEffect removed from activeEffects\ncanAct = false\nreturns false
+note over Goblin
+  StunEffect.onExpire() is a no-op by default.
+  Iterator removes StunEffect from activeEffects.
+  canAct = false → returns false.
+end note
 Goblin --> Engine : false (cannot act)
 
-note over Engine : beginTurn() returned false\nEnemy AI strategy NOT executed\nNo damage TurnFrame added
+note over Engine
+  enemy.beginTurn() == false.
+  Enemy AI strategy NOT executed.
+  No attack TurnFrame added for Goblin.
+  Goblin's activeEffects is now EMPTY.
+  Goblin will attack normally next round.
+end note
 
 Engine -> Engine : sweepDeadEnemies()
-note over Engine : Goblin alive — nothing removed
+note over Engine : Goblin hp > 0 — nothing removed.
 
-Engine -> State : checkEndCondition() → 0
+' ── End of Round ───────────────────────────────────────────────
+Engine -> State : checkEndCondition()
+State --> Engine : 0 (continue)
 Engine -> Engine : endRound()
-note over Engine : endRound() decrements specialSkillCooldown (2→1)\nrebuilds turn order — Goblin has NO StunEffect now
-
+note right of Engine
+  round++
+  warrior.decrementCooldownAfterTurn() → cooldown: 1→0
+  GameState.newTurnOrder() — Goblin has NO StunEffect now
+end note
 Engine --> App : 0 (continue)
+
+' ── Render Result ──────────────────────────────────────────────
 App -> Engine : drainTurnFrames()
-App -> App : render TurnFrames\n(only Warrior's Potion frame)
+Engine --> App : [TurnFrame("Warrior uses Potion.")]\nnote: no Goblin attack frame
+App -> Screen : render(ArenaViewState)
+Screen --> User : updated battle screen\n(Goblin did not attack — Stun icon gone next round)
 
 @enduml

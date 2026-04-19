@@ -2,73 +2,139 @@
 hide footbox
 title Scenario 8: Player Turn — Warrior Basic Attack Eliminates Goblin
 
-participant "ArenaBattleScreen" as Screen
-participant "GameApp" as App
-participant "QtePolicy" as QTE
-participant "BattleEngine" as Engine
-participant "Warrior" as Warrior
-participant "Goblin" as Goblin
-participant "GameState" as State
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
 
-note over Screen, State
-  Goblin's StunEffect has expired (Scenario 7).
-  Warrior acts first (SPD 30 > Goblin SPD 25).
-  Basic attack now uses QTE multiplier via applyScaledAttack().
-  PlayerAction.bAttack() is NOT used for basic attack in the new engine.
+actor       "User"                         as User
+boundary    "ArenaBattleScreen"            as Screen
+control     "GameApp\n<<ActionCallbacks>>" as App
+control     "QtePolicy"                    as QTE
+control     "BattleEngine"                 as Engine
+entity      "Warrior\n<<Player>>"          as Warrior
+entity      "Goblin\n<<Enemy>>"            as Goblin
+entity      "GameState\n<<Static>>"        as State
+boundary    "EndgameScreen"                as Endgame
+
+note over User, Endgame
+  Goblin's StunEffect expired last round (Scenario 7). specialSkillCooldown = 0 again.
+  Basic attack now uses applyScaledAttack() with a QTE multiplier — NOT PlayerAction.bAttack().
+  Warrior (SPD=30) acts first. One hit kills Goblin.
 end note
 
-Screen -> App : onBasicAttack(targetIndex)
-App -> QTE : resolveAttackQte()
-note over QTE : NoOpQtePolicy → always NORMAL\nor CustomModeQtePolicy → shows timing bar
-QTE --> App : QteResult.NORMAL (multiplier = 1.0)
+' ── User Input ─────────────────────────────────────────────────
+User -> Screen : clicks "Basic Attack" button
+note right of User
+  User sees Goblin no longer has Stun icon.
+  Selects Basic Attack to finish it off.
+  Input: button click → "Basic Attack"
+end note
 
-App -> Engine : executePlayerTurn(1, targetIndex, null, multiplier=1.0)
+' ── QTE Resolution ─────────────────────────────────────────────
+Screen -> App : callbacks.onBasicAttack(targetIndex)
+note right of Screen
+  buildActionBar():
+  createSafeButton("Basic Attack",
+    () -> callbacks.onBasicAttack(targetIdx))
+end note
+
+App -> QTE : resolveAttackQte()
+note right of App
+  GameApp always calls QtePolicy before
+  passing multiplier to executePlayerTurn.
+  Translates user input → damage multiplier.
+end note
+note over QTE
+  NoOpQtePolicy → NORMAL (1.0x)
+  CustomModeQtePolicy → user hits timing bar:
+    EARLY = 0.5x  |  NORMAL = 1.0x  |  PERFECT = 2.0x
+end note
+QTE --> App : QteResult.NORMAL (multiplier=1.0)
+
+App -> Engine : executePlayerTurn(choice=1, targetIndex, null, multiplier=1.0)
+note right of App
+  choice=1 → Basic Attack branch.
+  multiplier from QTE is passed through.
+end note
+
 Engine -> State : getPlayer() → Warrior
 Engine -> State : getCurrentWave() → [Goblin]
+Engine -> State : getTurnOrder() → [Warrior(30), Goblin(25)]
 
-note over Engine : Iterating turnOrderSnapshot...\nProcessing: Warrior (Player)
+' ── Warrior Phase — Basic Attack ───────────────────────────────
+note over Engine : Processing: Warrior (instanceof Player)
 
 Engine -> Warrior : beginTurn()
-note over Warrior : No active effects\ncanAct = true
+note over Warrior
+  No active effects.
+  canAct = true → returns true.
+end note
 Warrior --> Engine : true
 
-Engine -> Engine : executeChosenPlayerAction(choice=1, ...)
-note over Engine : case 1 → applyScaledAttack(warrior, goblin, 1.0)\n(does NOT go through PlayerAction.bAttack)
+note over Engine
+  case 1 → applyScaledAttack(warrior, goblin, multiplier=1.0)
+  Note: basic attack does NOT go through PlayerAction.bAttack().
+  Damage scaling is applied directly in BattleEngine.
+end note
 
 Engine -> Warrior : getAttack()
 Warrior --> Engine : 40
 Engine -> Goblin : getDefense()
-note over Goblin : No active effects\nbaseDefense = 15
+note over Goblin
+  No active effects (StunEffect expired).
+  returns baseDefense = 15
+end note
 Goblin --> Engine : 15
-note over Engine : baseDamage = max(0, 40 − 15) = 25\nscaledDamage = round(25 × 1.0) = 25
+
+note over Engine
+  baseDamage  = max(0, 40 − 15) = 25
+  scaledDamage = round(25 × 1.0) = 25
+end note
 
 Engine -> Goblin : takeDamage(25)
-note over Goblin : No effects to modifyIncomingDamage\nhp = max(0, hp − 25) = 0
-Goblin --> Engine : 25 (lethal)
+note over Goblin
+  No effects to modifyIncomingDamage.
+  hp = max(0, hp − 25) = 0
+end note
+Goblin --> Engine : 25 (lethal damage)
 
 Engine -> Engine : lastEnemyDamages = [25]
-Engine -> Engine : pendingTurnFrames.add(TurnFrame("Warrior attacks.", enemyDamages=[25]))
-Engine -> Engine : sweepDeadEnemies()
+Engine -> Engine : pendingTurnFrames.add(\n  TurnFrame("Warrior attacks.", enemyDamages=[25]))
 
+' ── Sweep Dead Enemies ─────────────────────────────────────────
+Engine -> Engine : sweepDeadEnemies()
 Engine -> Goblin : isAlive()
 Goblin --> Engine : false (hp = 0)
-Engine -> Engine : pendingTurnFrames.add(TurnFrame("Goblin was defeated!"))
-note over Engine : currentWave.remove(goblin)\nturnOrder.remove(goblin)
+Engine -> Engine : pendingTurnFrames.add(\n  TurnFrame("Goblin was defeated!"))
+note over Engine
+  currentWave.remove(goblin)
+  turnOrder.remove(goblin)
+end note
 Engine -> State : setCurrentWave([])
 Engine -> State : advanceWaveIfCleared()
-note over State : wave empty, no further waves\nreturns false (game over condition)
+note over State
+  Wave is empty. No further waves remain.
+  returns false (game over, not a new wave).
+end note
+State --> Engine : false
 
+' ── Victory Condition ──────────────────────────────────────────
 Engine -> State : checkEndCondition()
-note over State : all waves cleared, player alive\nreturns 1 (victory)
+note over State
+  enemies list is empty → all waves cleared.
+  Player is alive → return 1 (VICTORY).
+end note
 State --> Engine : 1
 
-note over Engine : endCondition != 0 → endRound() NOT called
+note over Engine : endCondition != 0 → endRound() is NOT called.
 Engine --> App : 1 (VICTORY)
 
+' ── Render Result & Endgame ────────────────────────────────────
 App -> Engine : drainTurnFrames()
-Engine --> App : [TurnFrame("Warrior attacks."), TurnFrame("Goblin was defeated!")]
-App -> App : render frames with animation
-App -> App : checkEndCondition(1, triggerEndgameScreen=true)
-App -> Screen : EndgameScreen.show(victory=true, ...)
+Engine --> App : [TurnFrame("Warrior attacks.", dmg=25), TurnFrame("Goblin was defeated!")]
+
+App -> Screen : render frames with animation
+App -> App : checkEndCondition(state=1, triggerEndgameScreen=true)
+App -> Endgame : EndgameScreen.show(screen, gui, victory=true, hp, round, ...)
+Endgame --> User : Endgame screen shown\n(Victory! — options: Replay / New Game / Quit)
 
 @enduml

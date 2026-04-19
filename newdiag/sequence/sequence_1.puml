@@ -2,28 +2,73 @@
 hide footbox
 title Scenario 1: Enemy Turn — Goblin Executes Basic Attack on Warrior
 
-participant "ArenaBattleScreen" as Screen
-participant "GameApp" as App
-participant "BattleEngine" as Engine
-participant "GameState" as State
-participant "Goblin" as Goblin
-participant "BasicEnemyActionStrategy" as Strategy
-participant "Warrior" as Warrior
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
 
-note over Screen, Warrior
-  SpeedBasedTurnOrder sorts all combatants by speed DESC.
-  Warrior (SPD 30) acts first, Goblin (SPD 25) acts second.
-  Both phases occur inside a single executePlayerTurn() call.
-  This diagram focuses on the Goblin (enemy) phase.
+actor       "User"                         as User
+boundary    "ArenaBattleScreen"            as Screen
+control     "GameApp\n<<ActionCallbacks>>" as App
+control     "QtePolicy"                    as QTE
+control     "BattleEngine"                 as Engine
+entity      "GameState\n<<Static>>"        as State
+entity      "Goblin\n<<Enemy>>"            as Goblin
+control     "BasicEnemyActionStrategy"     as Strategy
+entity      "Warrior\n<<Player>>"          as Warrior
+
+note over User, Warrior
+  SpeedBasedTurnOrder sorts ALL combatants by speed DESC.
+  Warrior (SPD=30) acts first, Goblin (SPD=25) acts second — both in one executePlayerTurn() call.
+  This diagram focuses on the Goblin (enemy) phase. The Warrior's action in this round is omitted.
 end note
 
-Screen -> App : onBasicAttack(targetIndex)
-App -> Engine : executePlayerTurn(1, targetIndex, null, qte.multiplier)
+' ── User Input ─────────────────────────────────────────────────
+User -> Screen : clicks "Basic Attack" button
+note right of User
+  User sees the action bar and
+  selects an attack this round.
+  Input: button click → "Basic Attack"
+end note
 
-note over Engine : Iterating turnOrderSnapshot...\nWarrior phase complete (omitted here).\nNow processing: Goblin (Enemy)
+' ── UI → Callback → Engine ─────────────────────────────────────
+Screen -> App : callbacks.onBasicAttack(targetIndex)
+note right of Screen
+  buildActionBar() wires:
+  createSafeButton("Basic Attack",
+    () -> callbacks.onBasicAttack(targetIdx))
+end note
+
+App -> QTE : resolveAttackQte()
+note right of App
+  NoOpQtePolicy → always NORMAL (1.0x)
+  CustomModeQtePolicy → shows timing bar
+end note
+QTE --> App : QteResult.NORMAL (multiplier=1.0)
+
+App -> Engine : executePlayerTurn(choice=1, targetIndex, null, 1.0)
+note right of App
+  choice=1 → Basic Attack branch
+  multiplier from QTE result
+end note
+
+Engine -> State : getPlayer() → Warrior
+Engine -> State : getCurrentWave() → [Goblin]
+Engine -> State : getTurnOrder() → [Warrior(30), Goblin(25)]
+
+' ── Warrior Phase (abbreviated) ────────────────────────────────
+note over Engine
+  Warrior phase: applyScaledAttack() runs first.
+  (See Scenario 8 for full basic attack detail.)
+  Goblin survives — enemy phase begins now.
+end note
+
+' ── Goblin Phase ───────────────────────────────────────────────
+note over Engine : Processing: Goblin (instanceof Enemy)
 
 Engine -> Goblin : beginTurn()
-note over Goblin : No active effects\ncanAct = true
+note over Goblin
+  No active effects.
+  canAct = true → returns true.
+end note
 Goblin --> Engine : true
 
 Engine -> Goblin : getStrategy()
@@ -35,25 +80,40 @@ Warrior --> Strategy : true
 Strategy -> Goblin : getAttack()
 Goblin --> Strategy : 35
 Strategy -> Warrior : getDefense()
-note over Warrior : No active effects\nbaseDefense = 20
+note over Warrior
+  No active effects.
+  returns baseDefense = 20
+end note
 Warrior --> Strategy : 20
 note over Strategy : damage = max(0, 35 − 20) = 15
 Strategy -> Warrior : takeDamage(15, goblin)
-note over Warrior : No effects to modifyIncomingDamage\nhp -= 15
-Warrior --> Strategy : 15
+note over Warrior
+  No effects to modifyIncomingDamage.
+  hp -= 15
+end note
+Warrior --> Strategy : 15 (damage dealt)
+Strategy --> Engine : done
 
 Engine -> Engine : lastPlayerDamage = 15
-Engine -> Engine : pendingTurnFrames.add(TurnFrame("Goblin attacks.", damage=15))
+Engine -> Engine : pendingTurnFrames.add(\n  TurnFrame("Goblin attacks.", playerDamage=15))
 Engine -> Engine : sweepDeadEnemies()
-note over Engine : Goblin alive — nothing removed
+note over Engine : Goblin hp > 0 — nothing removed.
 
+' ── End of Round ───────────────────────────────────────────────
 Engine -> State : checkEndCondition()
 State --> Engine : 0 (continue)
 Engine -> Engine : endRound()
+note right of Engine
+  round++
+  warrior.decrementCooldownAfterTurn()
+  GameState.newTurnOrder()
+end note
 Engine --> App : 0 (continue)
 
+' ── Render Result ──────────────────────────────────────────────
 App -> Engine : drainTurnFrames()
-Engine --> App : [TurnFrame("Goblin attacks.", playerDamage=15)]
-App -> Screen : render(ArenaViewState with floatingDamage=15)
+Engine --> App : [TurnFrame("Warrior attacks."), TurnFrame("Goblin attacks.", dmg=15)]
+App -> Screen : render(ArenaViewState, floatingDamage=15 on Warrior)
+Screen --> User : updated battle screen\n(Warrior HP reduced by 15)
 
 @enduml

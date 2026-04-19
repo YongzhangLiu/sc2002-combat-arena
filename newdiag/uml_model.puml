@@ -11,6 +11,10 @@ skinparam package {
     BackgroundColor #E8F5E9
     BorderColor #388E3C
 }
+skinparam note {
+    BackgroundColor #FFFDE7
+    BorderColor #F9A825
+}
 
 hide empty members
 
@@ -26,26 +30,34 @@ package "arena.model.action" {
 
     class BasicAttack {
         + execute(actor, target, all) : void
-        note: damage = attacker.ATK - target.DEF
     }
 
     class Defend {
         + execute(actor, target, all) : void
-        note: applies DefendBuff to actor
     }
 
     class UseItem {
         - item : Item
         ..
         + execute(actor, target, all) : void
-        note: calls item.use() then removes item
     }
 
     class UseSpecialSkill {
         + execute(actor, target, all) : void
-        note: delegates to player.useSpecialSkill()
     }
 }
+
+note as N_ACTION #FFFDE7
+  <b>Action — Template Method Pattern</b>
+  Action defines the execute() contract.
+  Each subclass implements the specific behaviour:
+  • BasicAttack: damage = ATK − DEF, calls takeDamage()
+  • Defend: wraps actor in a DefendBuff StatusEffect
+  • UseItem: delegates to item.use(), then removes item
+  • UseSpecialSkill: casts actor to Player, calls
+    player.useSpecialSkill() — sets cooldown after use
+end note
+Action .. N_ACTION
 
 ' ── Effects ─────────────────────────────────────
 package "arena.model.effect" {
@@ -65,21 +77,32 @@ package "arena.model.effect" {
         turns=2  defenseBoost=+10
         ..
         + modifyDefense(base) : int
-        note: returns base + 10
     }
 
     class StunEffect {
         DEFAULT_DURATION = 2
         ..
         + onTurnStart(combatant) : boolean
-        note: decrements turns, returns true\n(skip turn) until expired
     }
 
     class SmokeBombEffect {
         + modifyIncomingDamage(dmg, src, tgt) : int
-        note: blocks all incoming damage\nfrom enemies (returns 0)
     }
 }
+
+note as N_EFFECT #FFFDE7
+  <b>StatusEffect — Hook Pattern</b>
+  Combatant.beginTurn() and getDefense() iterate
+  activeEffects and call the relevant hooks:
+  • DefendBuff.modifyDefense(): raises effective DEF by +10
+    for 2 of the bearer's own turns, then expires.
+  • StunEffect.onTurnStart(): returns true for 2 turns,
+    causing BattleEngine to skip the enemy's AI action.
+  • SmokeBombEffect.modifyIncomingDamage(): returns 0
+    whenever the attacker is an Enemy instance,
+    making the player invulnerable for 2 turns.
+end note
+StatusEffect .. N_EFFECT
 
 ' ── Items ────────────────────────────────────────
 package "arena.model.item" {
@@ -96,19 +119,27 @@ package "arena.model.item" {
         HEAL_AMOUNT = 100
         ..
         + use(player, enemies, target) : void
-        note: player.heal(100)
     }
 
     class PowerStone {
         + use(player, enemies, target) : void
-        note: triggerSpecialSkillWithoutCooldown()
     }
 
     class SmokeBomb {
         + use(player, enemies, target) : void
-        note: applies SmokeBombEffect to player
     }
 }
+
+note as N_ITEM #FFFDE7
+  <b>Item behaviours</b>
+  • Potion: calls player.heal(100) — restores up to 100 HP.
+  • PowerStone: calls triggerSpecialSkillWithoutCooldown()
+    — fires the player's special skill immediately with
+    no cooldown penalty, effectively bypassing the 3-turn wait.
+  • SmokeBomb: applies SmokeBombEffect to the player,
+    granting 2 turns of full damage immunity vs enemies.
+end note
+Item .. N_ITEM
 
 ' ── Inheritance ──────────────────────────────────
 Action      <|-- BasicAttack
@@ -125,10 +156,11 @@ Item <|-- PowerStone
 Item <|-- SmokeBomb
 
 ' ── Cross-group associations ─────────────────────
-UseItem     --> Item         : holds
-Defend      ..> DefendBuff   : creates
-SmokeBomb   ..> SmokeBombEffect : creates
-PowerStone  ..> Player       : calls triggerSpecialSkill
+UseItem          -->  Item            : holds
+Defend           ..>  DefendBuff      : creates
+SmokeBomb        ..>  SmokeBombEffect : creates
+PowerStone       ..>  Player          : calls triggerSpecialSkill
+UseSpecialSkill  ..>  Player          : casts actor → calls useSpecialSkill()
 
 note bottom of Player : Defined in\nCombatant module
 

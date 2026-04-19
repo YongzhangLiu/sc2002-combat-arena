@@ -2,37 +2,86 @@
 hide footbox
 title Scenario 5: Enemy Turn — Goblin Is Stunned, Skips Turn
 
-participant "BattleEngine" as Engine
-participant "Goblin" as Goblin
-participant "StunEffect" as Stun
-participant "GameState" as State
-participant "GameApp" as App
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
 
-note over Engine, App
-  Continuation of the same executePlayerTurn() call as Scenario 4.
-  Warrior (SPD 30) already used Shield Bash — StunEffect now on Goblin (turns=2).
-  Now processing: Goblin (SPD 25) in the enemy phase.
+actor       "User"                         as User
+boundary    "ArenaBattleScreen"            as Screen
+control     "GameApp\n<<ActionCallbacks>>" as App
+control     "BattleEngine"                 as Engine
+entity      "Goblin\n<<Enemy>>"            as Goblin
+entity      "StunEffect\n<<StatusEffect>>" as Stun
+entity      "GameState\n<<Static>>"        as State
+
+note over User, State
+  This is the enemy phase of the same executePlayerTurn() call as Scenario 4.
+  Warrior (SPD=30) already used Shield Bash — StunEffect on Goblin (remainingTurns=2).
+  Now: Goblin (SPD=25) tries to act but cannot.
 end note
 
+' ── User Input (same round as Scenario 4) ──────────────────────
+User -> Screen : clicks "Special Skill" button
+note right of User
+  Same user action that triggered Scenario 4.
+  Shown here for continuity — enemy phase
+  occurs in the same executePlayerTurn() call.
+end note
+
+Screen -> App : callbacks.onSpecialSkill(targetIndex)
+App -> Engine : executePlayerTurn(choice=4, targetIndex, null, 1.0)
+note right of App : choice=4 → Shield Bash branch (Scenario 4)
+
+note over Engine
+  Warrior phase: Shield Bash ran, StunEffect applied to Goblin.
+  (See Scenario 4 for player phase detail.)
+  Now processing: Goblin (instanceof Enemy).
+end note
+
+' ── Goblin Phase — Stunned ─────────────────────────────────────
 Engine -> Goblin : beginTurn()
-note over Goblin : Iterates activeEffects\ncalls StunEffect.onTurnStart(goblin)
+note over Goblin
+  Iterates activeEffects → finds StunEffect.
+  Calls StunEffect.onTurnStart(goblin).
+end note
 Goblin -> Stun : onTurnStart(goblin)
-note over Stun : remainingTurns > 0\nremainingTurns-- (2→1)\nreturn true (skip turn)
+note over Stun
+  remainingTurns > 0
+  remainingTurns-- (2 → 1)
+  returns true → skip this turn
+end note
 Stun --> Goblin : true (skip turn)
-note over Goblin : canAct = false\nStunEffect.isExpired()? turns=1 → no, keep it\nreturns false
+
+note over Goblin
+  canAct = false.
+  StunEffect.isExpired()? turns=1 → no, stays active.
+  returns false.
+end note
 Goblin --> Engine : false (cannot act)
 
-note over Engine : beginTurn() returned false\nEnemy AI strategy NOT executed\nenemyActed = false — no TurnFrame added
+note over Engine
+  enemy.beginTurn() == false.
+  Enemy AI strategy is NOT executed.
+  No attack TurnFrame is added for Goblin.
+end note
 
 Engine -> Engine : sweepDeadEnemies()
-note over Engine : Goblin alive — nothing removed
+note over Engine : Goblin hp > 0 — nothing removed.
 
-Engine -> State : checkEndCondition() → 0
+' ── End of Round ───────────────────────────────────────────────
+Engine -> State : checkEndCondition()
+State --> Engine : 0 (continue)
 Engine -> Engine : endRound()
-note over Engine : endRound() decrements specialSkillCooldown (3→2)\nrebuilds turn order for next round
-
+note right of Engine
+  round++
+  warrior.decrementCooldownAfterTurn() → cooldown: 3→2
+  GameState.newTurnOrder() — Goblin still alive with StunEffect (turns=1)
+end note
 Engine --> App : 0 (continue)
+
+' ── Render Result ──────────────────────────────────────────────
 App -> Engine : drainTurnFrames()
-App -> App : render TurnFrames from this round\n(only Warrior's Shield Bash frame)
+Engine --> App : [TurnFrame("Warrior casts Shield Bash.", dmg=25)]\nnote: no Goblin attack frame — Goblin was stunned
+App -> Screen : render(ArenaViewState)
+Screen --> User : updated battle screen\n(Goblin did not attack — Stun icon remains)
 
 @enduml
