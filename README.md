@@ -14,10 +14,10 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║   WARRIOR    vs    GOBLIN · WOLF · DRAGON · WIZARD · ???    ║
-║   ──────           ─────────────────────────────────────    ║
-║   HP 260           Use your wits. Use your items.           ║
-║   ATK  40          One wrong move and the run is over.      ║
+║   WARRIOR    vs    GOBLIN · WOLF · DRAGON · WIZARD · ???     ║
+║   ──────           ─────────────────────────────────────     ║
+║   HP 260           Use your wits. Use your items.            ║
+║   ATK  40          One wrong move and the run is over.       ║
 ║   DEF  20                                                    ║
 ║   SPD  30                [ PRESS ENTER ]                     ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -454,7 +454,7 @@ Eight canonical scenarios trace one full Warrior-vs-Goblin encounter from first 
 
 ```
 sc2002-combat-arena/
-├── src/main/java/arena/
+├── src/arena/
 │   ├── GameApp.java               ← entry point, top-level orchestrator
 │   ├── engine/                    ← BattleEngine, GameState, PlayerAction
 │   │   ├── controller/            ← AiTurnController + implementations
@@ -469,9 +469,9 @@ sc2002-combat-arena/
 │   └── ui/
 │       ├── screen/                ← ArenaBattleScreen, setup screens, endgame
 │       ├── model/                 ← ArenaViewState DTOs
-│       ├── sprite/                ← AsciiSprite, SpriteCatalog
+│       ├── sprite/                ← AsciiSprite, SpriteCatalog handling
 │       └── util/                  ← layout, borders, formatting helpers
-├── assets/                        ← ASCII sprite files
+├── assets/sprites/                ← ASCII sprite files
 ├── UMLDiagrams/                   ← .puml sources + rendered .svg
 ├── docs/                          ← project report
 └── pom.xml
