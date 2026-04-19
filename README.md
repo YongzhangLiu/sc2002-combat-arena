@@ -23,7 +23,7 @@
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-**[📄 Report](docs/SC2002_Combat_Arena_Report.docx)** · **[🎥 Demo Video](https://youtu.be/26Em07r7CUo)** · **[📊 UML Diagrams](#-uml-diagrams)** · **[🚀 Quick Start](#-quick-start)**
+**[📄 Report](docs/SC2002_Combat_Arena_Report.pdf)** · **[🎥 Demo Video](https://youtu.be/26Em07r7CUo)** · **[📊 UML Diagrams](#-uml-diagrams)** · **[🚀 Quick Start](#-quick-start)**
 
 </div>
 
