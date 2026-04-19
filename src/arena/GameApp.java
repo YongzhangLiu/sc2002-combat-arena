@@ -159,11 +159,11 @@ public class GameApp {
             int playerOffset = (playerDamage != null && playerDamage > 0) ? -1 : 0;
             int[] enemyOffsets = buildEnemyDamageOffsets(enemyDamages);
             battleScreen.setDamageOffsets(playerOffset, enemyOffsets);
-            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, frame.getMessage(), playerDamage, enemyDamages, snapshotPlayerHp, snapshotEnemyHps));
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, null, playerDamage, enemyDamages, snapshotPlayerHp, snapshotEnemyHps));
             refreshScreen();
             try { Thread.sleep(230); } catch (InterruptedException e) {}
             battleScreen.setDamageOffsets(0, null);
-            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, frame.getMessage(), playerDamage, enemyDamages, snapshotPlayerHp, snapshotEnemyHps));
+            battleScreen.render(arena.ui.model.ArenaViewStateMapper.fromGameState(false, false, null, playerDamage, enemyDamages, snapshotPlayerHp, snapshotEnemyHps));
             refreshScreen();
             try { Thread.sleep(620); } catch (InterruptedException e) {}
         }
