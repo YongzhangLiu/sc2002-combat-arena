@@ -101,7 +101,7 @@ public final class CustomModeSetupScreen {
         panel.addComponent(DialogComposer.centered(opponentButton("Random", setup, refreshSummary)));
         panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 
-        panel.addComponent(DialogComposer.centered(new Label(fittedLine("QTE: timing bar for Basic Attack", contentWidth))));
+        panel.addComponent(DialogComposer.centered(new Label(fittedLine("QTE: timing bar for Basic Attack (press z)", contentWidth))));
         panel.addComponent(DialogComposer.centered(qteButton[0]));
         panel.addComponent(new EmptySpace(new TerminalSize(1, 1)));
 

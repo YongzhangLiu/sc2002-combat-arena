@@ -207,14 +207,16 @@ public class StartMenu {
         })));
         panel.addComponent(DialogComposer.centered(new Button("View Controls", () -> {
             showMessage(screen, gui, config.fullScreen, config.asciiMode, "CONTROLS",
-                    "- Up/Down: Navigate\n" +
-                    "- Mouse: Click buttons\n" +
-                    "- Enter: Confirm\n" +
-                    "- Esc: Back/Close");
+                    "Arrow keys: Navigate\n" +
+                    "Mouse: Click buttons\n" +
+                    "z: QTE timing       \n" +
+                    "Enter: Confirm      \n" +
+                    "Esc: Back/Close     ");
         })));
         panel.addComponent(DialogComposer.centered(new Button("Options", () -> {
             openOptions(screen, gui, config, result);
             if (result.restartRequested) {
+                window.close();
             }
         })));
         panel.addComponent(DialogComposer.centered(new Button("Exit", () -> {
