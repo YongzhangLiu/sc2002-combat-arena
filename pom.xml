@@ -5,7 +5,7 @@
 
     <groupId>arena</groupId>
     <artifactId>sc2002-combat-arena</artifactId>
-    <version>0.3.0</version>
+    <version>0.3.1</version>
 
     <properties>
         <maven.compiler.source>26</maven.compiler.source>
