@@ -118,6 +118,18 @@ Four layers. One entry point. Zero circular dependencies.
 - [JDK 26](https://openjdk.org/projects/jdk/26/)
 - [Maven 3.9+](https://maven.apache.org/download.cgi)
 
+### Run Precompiled Package (Recommended)
+- Download latest package from Releases
+- Then run it anywhere with JDK 26:
+```bash
+# Linux / macOS
+java -jar target/sc2002-combat-arena-<version>-all.jar
+
+# Windows (use javaw to avoid a spare console window)
+javaw -jar target/sc2002-combat-arena-<version>-all.jar
+```
+- Introduced from `v0.3.1`, a `sc2002-combat-arena-<version>-all-compat.jar` package is available, compiled for JDK 21 and above.
+
 ### Build & Run
 
 ```bash
@@ -129,21 +141,11 @@ cd sc2002-combat-arena
 mvn compile exec:java
 ```
 
-### Package as a standalone JAR
+### Package as JAR
 
 ```bash
 mvn clean package
 # Produces: target/sc2002-combat-arena-<version>-all.jar
-```
-
-Then run it anywhere with JDK 26:
-
-```bash
-# Linux / macOS
-java -jar target/sc2002-combat-arena-<version>-all.jar
-
-# Windows (use javaw to avoid a spare console window)
-javaw -jar target/sc2002-combat-arena-<version>-all.jar
 ```
 
 <details>
