@@ -2,57 +2,137 @@
 hide footbox
 title Scenario 6: Player Turn — Warrior Uses Potion to Heal
 
-participant "ArenaBattleScreen" as Screen
-participant "GameApp" as App
-participant "BattleEngine" as Engine
-participant "PlayerAction" as PA
-participant "UseItem" as UI
-participant "Potion" as Potion
-participant "Warrior" as Warrior
-participant "DefendBuff" as Buff
-participant "GameState" as State
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
 
-note over Screen, State
-  Scenarios 6 and 7 occur within the same executePlayerTurn() call.
-  Warrior (SPD 30) acts first → uses Potion.
-  Goblin (SPD 25) acts second → still stunned, skips again (Scenario 7).
-  This diagram focuses on the Warrior (player) phase.
-  Note: DefendBuff from Scenario 2 expires here (turns: 1→0).
+actor       "User"                          as User
+boundary    "ArenaBattleScreen"             as Screen
+control     "GameApp\n<<ActionCallbacks>>"  as App
+control     "BattleEngine"                  as Engine
+control     "PlayerAction"                  as PA
+entity      "UseItem\n<<Action>>"           as UI
+entity      "Potion\n<<Item>>"              as Potion
+entity      "Warrior\n<<Player>>"           as Warrior
+entity      "DefendBuff\n<<StatusEffect>>"  as Buff
+entity      "GameState\n<<Static>>"         as State
+
+note over User, State
+  Scenarios 6 and 7 occur in the same executePlayerTurn() call.
+  Warrior (SPD=30) acts first → uses Potion. DefendBuff expires here (turns=1→0).
+  Goblin (SPD=25) acts second → still stunned, skips again (Scenario 7).
 end note
 
-Screen -> App : onUseItem(itemIndex, targetIndex)
-App -> App : item = player.getInventory().get(itemIndex)
-App -> Engine : executePlayerTurn(3, targetIndex, potion, 1.0)
-Engine -> State : getPlayer() → Warrior
+' ── User Input ─────────────────────────────────────────────────
+User -> Screen : clicks "Use Item" button
+note right of User
+  User sees the action bar.
+  "Use Item" shows because hasItems = true.
+  Input: button click → "Use Item"
+end note
 
-note over Engine : Iterating turnOrderSnapshot...\nProcessing: Warrior (Player)
+Screen -> Screen : showItemSelectionDialog(state, targetIdx)
+note right of Screen
+  buildActionBar() wires "Use Item" to
+  showItemSelectionDialog() — a sub-dialog
+  is shown listing the player's inventory.
+end note
+
+User -> Screen : selects "Potion" from dialog
+note right of User
+  User picks Potion from inventory list.
+  Input translated: item selection → itemIndex=0
+end note
+
+Screen -> App : callbacks.onUseItem(itemIndex=0, targetIndex)
+note right of Screen
+  Dialog callback fires:
+  callbacks.onUseItem(itemIndex, targetIdx)
+end note
+
+App -> App : item = player.getInventory().get(itemIndex)
+note right of App
+  GameApp resolves itemIndex → actual Item object
+  from the Player's live inventory list.
+end note
+
+App -> Engine : executePlayerTurn(choice=3, targetIndex, potion, 1.0)
+note right of App : choice=3 → Use Item branch
+
+Engine -> State : getPlayer() → Warrior
+Engine -> State : getCurrentWave() → [Goblin]
+Engine -> State : getTurnOrder() → [Warrior(30), Goblin(25)]
+
+' ── Warrior Phase ──────────────────────────────────────────────
+note over Engine : Processing: Warrior (instanceof Player)
 
 Engine -> Warrior : beginTurn()
-note over Warrior : Iterates activeEffects\ncalls DefendBuff.onTurnStart(warrior)
+note over Warrior
+  Iterates activeEffects → finds DefendBuff (turns=1).
+  DefendBuff.onTurnStart(warrior): turns-- (1→0), returns false.
+  DefendBuff.isExpired()? turns=0 → true.
+  DefendBuff.onExpire(warrior) called → removed from activeEffects.
+  canAct = true → returns true.
+end note
 Warrior -> Buff : onTurnStart(warrior)
-note over Buff : remainingTurns-- (1→0)\nreturns false (don't skip)
-Buff --> Warrior : false
-note over Warrior : DefendBuff.isExpired()? turns=0 → true\nDefendBuff.onExpire(warrior) called\nDefendBuff removed from activeEffects\ncanAct = true
+Buff --> Warrior : false (don't skip)
+Warrior -> Buff : isExpired()
+Buff --> Warrior : true
+Warrior -> Buff : onExpire(warrior)
+note over Warrior : DefendBuff removed from activeEffects.
 Warrior --> Engine : true
 
 Engine -> Engine : executeChosenPlayerAction(choice=3, ...)
+note right of Engine : switch(3) → playerAction.consumeItem(...)
+
 Engine -> PA : consumeItem(warrior, goblin, [goblin], potion)
 PA -> UI : new UseItem(potion)
 PA -> UI : execute(warrior, goblin, [goblin])
 
-note over UI : actor instanceof Player → ok\nitem != null → ok
+note over UI
+  actor instanceof Player → ok.
+  item != null → ok.
+  Cast opponents → List<Enemy>.
+end note
+
 UI -> Potion : use(warrior, [goblin], goblin)
 Potion -> Warrior : heal(100)
-note over Warrior : hp = min(maxHp, hp + 100)
+note over Warrior
+  HEAL_AMOUNT = 100
+  hp = min(maxHp, hp + 100)
+end note
 Warrior --> Potion : done
+Potion --> UI : done
 
 UI -> Warrior : removeItem(potion)
-note over Warrior : potion removed from inventory
+note over Warrior : Potion removed from inventory list.
 Warrior --> UI : true
+UI --> PA : done
+PA --> Engine : done
 
-Engine -> Engine : pendingTurnFrames.add(TurnFrame("Warrior uses Potion."))
+Engine -> Engine : pendingTurnFrames.add(\n  TurnFrame("Warrior uses Potion."))
 Engine -> Engine : sweepDeadEnemies()
 
-note over Engine : Goblin phase follows next\n(see Scenario 7)
+' ── Goblin Phase ───────────────────────────────────────────────
+note over Engine
+  Goblin phase follows next in this same call.
+  Goblin is still stunned — see Scenario 7 for detail.
+end note
+
+' ── End of Round ───────────────────────────────────────────────
+Engine -> State : checkEndCondition()
+State --> Engine : 0 (continue)
+Engine -> Engine : endRound()
+note right of Engine
+  round++
+  warrior.decrementCooldownAfterTurn() → cooldown: 2→1
+  GameState.newTurnOrder()
+end note
+Engine --> App : 0 (continue)
+
+' ── Render Result ──────────────────────────────────────────────
+App -> Engine : drainTurnFrames()
+Engine --> App : [TurnFrame("Warrior uses Potion."), TurnFrame(Goblin stunned — no attack)]
+App -> Screen : render(ArenaViewState)
+Screen --> User : updated battle screen\n(Warrior HP restored, DefendBuff icon gone)
 
 @enduml

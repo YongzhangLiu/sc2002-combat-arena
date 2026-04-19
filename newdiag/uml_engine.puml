@@ -11,6 +11,10 @@ skinparam package {
     BackgroundColor #F3E5F5
     BorderColor #6A1B9A
 }
+skinparam note {
+    BackgroundColor #FFFDE7
+    BorderColor #F9A825
+}
 
 hide empty members
 
@@ -74,6 +78,18 @@ package "arena.engine" {
     }
 }
 
+note as N_OVERLOAD #FFFDE7
+  <b>Method Overloading — BattleEngine</b>
+  executePlayerTurn() has two signatures:
+  1. (choice, target, item)
+     → delegates to version 2 with multiplier = 1.0
+  2. (choice, target, item, multiplier)
+     → full implementation; applies QTE damage scaling.
+  This allows callers that don't use QTE to use the
+  simpler signature without behavioural differences.
+end note
+BattleEngine .. N_OVERLOAD
+
 ' ── Controller ──────────────────────────────────
 package "arena.engine.controller" {
 
@@ -83,7 +99,6 @@ package "arena.engine.controller" {
 
     class RandomAiTurnController {
         + resolveTurn(aiPlayer, humanTarget) : AiTurnResult
-        note: randomly picks attack / defend\n/ item / special each turn
     }
 
     class AiTurnResult {
@@ -94,6 +109,16 @@ package "arena.engine.controller" {
         + getDamageToPlayer() : Integer
     }
 }
+
+note as N_AI #FFFDE7
+  <b>AiTurnController (Custom Duel Mode)</b>
+  RandomAiTurnController randomly selects
+  from: attack, defend, item, or special skill
+  each turn, simulating an unpredictable opponent.
+  AiTurnResult carries the log message and any
+  damage dealt back to BattleEngine for rendering.
+end note
+RandomAiTurnController .. N_AI
 
 ' ── Mode ────────────────────────────────────────
 package "arena.engine.mode" {
@@ -110,7 +135,6 @@ package "arena.engine.mode" {
         + id() : String
         + initializeEnemies(init, setup) : void
         + usesQte() : boolean
-        note: delegates to init.initEnemies(difficulty)
     }
 
     class CustomDuelMode {
@@ -119,14 +143,24 @@ package "arena.engine.mode" {
         + id() : String
         + initializeEnemies(init, setup) : void
         + usesQte() : boolean
-        note: delegates to init.initCustomEnemies(type)
     }
 
     class GameModeFactory <<Static>> {
         + {static} fromSetup(setup) : GameMode
-        note: returns StandardMode or CustomDuelMode\nbased on setup.difficulty
     }
 }
+
+note as N_MODE #FFFDE7
+  <b>GameMode — Strategy Pattern</b>
+  GameModeFactory reads setup.difficulty and returns
+  the correct GameMode implementation:
+  • StandardMode → spawns wave-based enemies at
+    Easy / Medium / Hard difficulty.
+  • CustomDuelMode → spawns one opponent (Warrior,
+    Wizard, Goblin, Wolf, or Random) chosen by
+    the player; optionally enables QTE attacks.
+end note
+GameModeFactory .. N_MODE
 
 ' ── QTE ─────────────────────────────────────────
 package "arena.engine.qte" {
@@ -137,22 +171,35 @@ package "arena.engine.qte" {
 
     class NoOpQtePolicy {
         + resolveAttackQte() : QteResult
-        note: always returns NORMAL (1.0x)
     }
 
     class CustomModeQtePolicy {
         + resolveAttackQte() : QteResult
-        note: shows timing bar UI,\nreturns EARLY / NORMAL / PERFECT
     }
 
     enum QteResult {
-        EARLY  (0.5x)
-        NORMAL (1.0x)
+        EARLY   (0.5x)
+        NORMAL  (1.0x)
         PERFECT (2.0x)
         ..
         + multiplier() : double
     }
 }
+
+note as N_QTE #FFFDE7
+  <b>Polymorphism — QtePolicy</b>
+  BattleEngine only calls resolveAttackQte() on a
+  QtePolicy reference — it never checks which
+  implementation is active at runtime.
+  • NoOpQtePolicy silently returns NORMAL (1.0x),
+    used in Standard mode with no UI interruption.
+  • CustomModeQtePolicy shows a timing bar to the
+    player; the result (EARLY / NORMAL / PERFECT)
+    changes the damage multiplier passed to
+    executePlayerTurn().
+  Same call site, different behaviour — Polymorphism.
+end note
+QtePolicy .. N_QTE
 
 ' ── Relationships ────────────────────────────────
 BattleEngine  -->  PlayerAction
@@ -161,18 +208,18 @@ BattleEngine  -->  AiTurnController
 BattleEngine  *--  TurnFrame
 GameInit      -->  GameState
 
-AiTurnController  <|..  RandomAiTurnController
-RandomAiTurnController  -->  PlayerAction
-RandomAiTurnController  ..>  AiTurnResult : creates
+AiTurnController       <|..  RandomAiTurnController
+RandomAiTurnController -->   PlayerAction
+RandomAiTurnController ..>   AiTurnResult : creates
 
-GameMode   <|..  StandardMode
-GameMode   <|..  CustomDuelMode
-GameModeFactory  ..>  GameMode : creates
+GameMode        <|..  StandardMode
+GameMode        <|..  CustomDuelMode
+GameModeFactory ..>   GameMode : creates
 
-QtePolicy  <|..  NoOpQtePolicy
-QtePolicy  <|..  CustomModeQtePolicy
-CustomModeQtePolicy  ..>  QteResult
-NoOpQtePolicy        ..>  QteResult
+QtePolicy       <|..  NoOpQtePolicy
+QtePolicy       <|..  CustomModeQtePolicy
+CustomModeQtePolicy ..>  QteResult
+NoOpQtePolicy       ..>  QteResult
 
 StandardMode   ..>  GameInit : calls initEnemies
 CustomDuelMode ..>  GameInit : calls initCustomEnemies

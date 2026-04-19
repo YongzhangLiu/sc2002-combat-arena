@@ -2,61 +2,132 @@
 hide footbox
 title Scenario 4: Player Turn — Warrior Uses Shield Bash, Stunning Goblin
 
-participant "ArenaBattleScreen" as Screen
-participant "GameApp" as App
-participant "BattleEngine" as Engine
-participant "PlayerAction" as PA
-participant "UseSpecialSkill" as USS
-participant "Warrior" as Warrior
-participant "StunEffect" as Stun
-participant "Goblin" as Goblin
-participant "GameState" as State
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
 
-note over Screen, State
-  Scenarios 4 and 5 occur within the same executePlayerTurn() call.
-  Warrior (SPD 30) acts first → Shield Bash stuns Goblin.
-  Goblin (SPD 25) acts second → is stunned, skips turn (Scenario 5).
-  This diagram focuses on the Warrior (player) phase.
+actor       "User"                          as User
+boundary    "ArenaBattleScreen"             as Screen
+control     "GameApp\n<<ActionCallbacks>>"  as App
+control     "BattleEngine"                  as Engine
+control     "PlayerAction"                  as PA
+entity      "UseSpecialSkill\n<<Action>>"   as USS
+entity      "Warrior\n<<Player>>"           as Warrior
+entity      "DefendBuff\n<<StatusEffect>>"  as Buff
+entity      "StunEffect\n<<StatusEffect>>"  as Stun
+entity      "Goblin\n<<Enemy>>"             as Goblin
+entity      "GameState\n<<Static>>"         as State
+
+note over User, State
+  Scenarios 4 and 5 occur in the same executePlayerTurn() call.
+  Warrior (SPD=30) acts first → Shield Bash stuns Goblin.
+  Goblin (SPD=25) acts second → is stunned, skips (Scenario 5).
+  DefendBuff from Scenario 2 is still active entering this round (turns=2→1 here).
 end note
 
-Screen -> App : onSpecialSkill(targetIndex)
-App -> Engine : executePlayerTurn(4, targetIndex, null, 1.0)
+' ── User Input ─────────────────────────────────────────────────
+User -> Screen : clicks "Special Skill" button
+note right of User
+  User sees the action bar.
+  "Special Skill" button is enabled
+  because specialSkillCooldown = 0.
+  Input: button click → "Special Skill"
+end note
+
+' ── UI → Callback → Engine ─────────────────────────────────────
+Screen -> App : callbacks.onSpecialSkill(targetIndex)
+note right of Screen
+  buildActionBar() wires:
+  createSafeButton("Special Skill",
+    () -> callbacks.onSpecialSkill(targetIdx))
+  Only fires if skill is not on cooldown.
+end note
+
+App -> Engine : executePlayerTurn(choice=4, targetIndex, null, 1.0)
+note right of App : choice=4 → Special Skill branch
+
 Engine -> State : getPlayer() → Warrior
 Engine -> State : getCurrentWave() → [Goblin]
+Engine -> State : getTurnOrder() → [Warrior(30), Goblin(25)]
 
-note over Engine : Iterating turnOrderSnapshot...\nProcessing: Warrior (Player)
+' ── Warrior Phase ──────────────────────────────────────────────
+note over Engine : Processing: Warrior (instanceof Player)
 
 Engine -> Warrior : beginTurn()
-note over Warrior : DefendBuff.onTurnStart() called\nremainingTurns-- (2→1), returns false\nDefendBuff.isExpired()? turns=1 → no\ncanAct = true
+note over Warrior
+  Iterates activeEffects → finds DefendBuff.
+  DefendBuff.onTurnStart(warrior): turns-- (2→1), returns false.
+  DefendBuff.isExpired()? turns=1 → no, keep it.
+  canAct = true → returns true.
+end note
+Warrior -> Buff : onTurnStart(warrior)
+Buff --> Warrior : false (don't skip)
 Warrior --> Engine : true
 
 Engine -> Engine : executeChosenPlayerAction(choice=4, ...)
+note right of Engine : switch(4) → playerAction.specialSkill(...)
+
 Engine -> PA : specialSkill(warrior, goblin, [goblin])
 PA -> USS : new UseSpecialSkill()
 PA -> USS : execute(warrior, goblin, [goblin])
 
+note over USS
+  actor instanceof Player → ok.
+  Cast opponents → List<Enemy>.
+end note
+
 USS -> Warrior : useSpecialSkill([goblin], goblin)
 Warrior -> Warrior : canUseSpecialSkill()
-note over Warrior : cooldown = 0 → true
+note over Warrior : specialSkillCooldown = 0 → true
+Warrior --> Warrior : true
 Warrior -> Warrior : performSpecialSkill([goblin], goblin)
 
-note over Warrior : damage = max(0, getAttack(40) − goblin.getDefense(15)) = 25
+note over Warrior
+  Warrior.performSpecialSkill():
+  damage = max(0, getAttack(40) − goblin.getDefense(15)) = 25
+end note
 Warrior -> Goblin : takeDamage(25, warrior)
-note over Goblin : No active effects\nhp -= 25
-Goblin --> Warrior : 25
+note over Goblin
+  No active effects.
+  hp -= 25
+end note
+Goblin --> Warrior : 25 (damage dealt)
 
 Warrior -> Stun : new StunEffect()
-note over Stun : DEFAULT_DURATION = 2\nremainingTurns = 2
+note over Stun : DEFAULT_DURATION = 2 → remainingTurns = 2
 Warrior -> Goblin : addStatusEffect(stunEffect)
 Goblin -> Stun : onApply(goblin)
-note over Goblin : stunEffect added to activeEffects
+note over Goblin : stunEffect added to activeEffects.
 
 Warrior -> Warrior : specialSkillCooldown = 3
+Warrior --> USS : done
+USS --> PA : done
+PA --> Engine : done
 
-Engine -> Engine : pendingTurnFrames.add(TurnFrame("Warrior casts Shield Bash."))
+Engine -> Engine : pendingTurnFrames.add(\n  TurnFrame("Warrior casts Shield Bash.", enemyDmgs=[25]))
 Engine -> Engine : sweepDeadEnemies()
-note over Engine : Goblin hp > 0 — alive, not removed
+note over Engine : Goblin hp > 0 — alive, not removed.
 
-note over Engine : Goblin phase follows next\n(see Scenario 5)
+' ── Goblin Phase ───────────────────────────────────────────────
+note over Engine
+  Goblin phase follows next in this same call.
+  Goblin is stunned — see Scenario 5 for that detail.
+end note
+
+' ── End of Round ───────────────────────────────────────────────
+Engine -> State : checkEndCondition()
+State --> Engine : 0 (continue)
+Engine -> Engine : endRound()
+note right of Engine
+  round++
+  warrior.decrementCooldownAfterTurn() → cooldown: 3→2
+  GameState.newTurnOrder()
+end note
+Engine --> App : 0 (continue)
+
+' ── Render Result ──────────────────────────────────────────────
+App -> Engine : drainTurnFrames()
+Engine --> App : [TurnFrame("Warrior casts Shield Bash.", dmg=25),\n TurnFrame("Goblin was stunned.")]
+App -> Screen : render(ArenaViewState, floatingDamage=25 on Goblin)
+Screen --> User : updated battle screen\n(Goblin HP reduced, Stun icon appears)
 
 @enduml

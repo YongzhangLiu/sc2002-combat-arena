@@ -13,17 +13,19 @@ skinparam package {
 
 hide empty members
 
+' ── GameApp lives outside any layer — it orchestrates all of them ──
+class GameApp {
+    + run() : void
+    + {static} main(args) : void
+    - startGameSession(request) : void
+    - handlePlayerTurn(state, screen, engine) : void
+}
+
 package "UI Layer" #FCE4EC {
-    class GameApp {
-        + run() : void
-        + {static} main(args) : void
-        - startGameSession(request) : void
-        - handlePlayerTurn(state, screen, engine) : void
-    }
     class StartMenu <<Static>>
     class ArenaBattleScreen
     class EndgameScreen <<Static>>
-    class ArenaViewStateMapper <<Static>>
+    class ArenaViewState
 }
 
 package "Engine Layer" #F3E5F5 {
@@ -66,24 +68,24 @@ package "Domain Layer" #FFFDE7 {
     abstract class StatusEffect
 }
 
-' ── Layer connections ──────────────────────────
+' ── GameApp connections ────────────────────────
 GameApp          -->  StartMenu
 GameApp          -->  BattleEngine
 GameApp          -->  GameInit
-GameApp          -->  ArenaViewStateMapper
+GameApp          -->  ArenaViewState
 GameApp          -->  ArenaBattleScreen
 GameApp          -->  EndgameScreen
 GameApp          -->  GameModeFactory
 GameApp          -->  QtePolicy
 
+' ── Engine Layer connections ───────────────────
 BattleEngine     -->  GameState
 BattleEngine     -->  PlayerAction
 BattleEngine     -->  AiTurnController
 GameModeFactory  ..>  GameMode
 GameInit         -->  GameState
 
-ArenaViewStateMapper --> GameState
-
+' ── Strategy Layer connections ─────────────────
 TurnOrderStrategy    <|..  SpeedBasedTurnOrder
 EnemyActionStrategy  <|..  BasicEnemyActionStrategy
 AiTurnController     <|..  RandomAiTurnController
@@ -91,6 +93,7 @@ AiTurnController     <|..  RandomAiTurnController
 GameState        ..>  TurnOrderStrategy : uses
 Enemy            -->  EnemyActionStrategy : uses
 
+' ── Domain Layer connections ───────────────────
 Combatant <|-- Player
 Combatant <|-- Enemy
 Player    <|-- Warrior

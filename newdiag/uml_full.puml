@@ -1,0 +1,648 @@
+@startuml uml_full
+title SC2002 Combat Arena — Complete Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam package {
+    BorderColor #555555
+    FontStyle Bold
+}
+
+hide empty members
+
+' ═══════════════════════════════════════
+' ENTRY POINT
+' ═══════════════════════════════════════
+
+package "arena" #E8EAF6 {
+    class GameApp {
+        - activeMode : GameMode
+        - qtePolicy : QtePolicy
+        ..
+        + run() : void
+        + {static} main(args) : void
+        - startGameSession(request) : void
+        - handlePlayerTurn(state, screen, engine) : void
+    }
+}
+
+' ═══════════════════════════════════════
+' ENGINE LAYER
+' ═══════════════════════════════════════
+
+package "arena.engine" #F3E5F5 {
+
+    class GameState <<Static>> {
+        - {static} currentRound : int
+        - {static} players : List<Player>
+        - {static} enemies : List<List<Combatant>>
+        - {static} turnOrder : List<Combatant>
+        - {static} combatLog : Deque<String>
+        ..
+        + {static} getPlayer() : Player
+        + {static} getCurrentWave() : List<Combatant>
+        + {static} checkEndCondition() : int
+        + {static} newTurnOrder() : void
+        + {static} advanceWaveIfCleared() : boolean
+        + {static} addLog(msg) : void
+        + {static} resetState() : void
+    }
+
+    class BattleEngine {
+        - playerAction : PlayerAction
+        - aiTurnController : AiTurnController
+        - pendingTurnFrames : List<TurnFrame>
+        ..
+        + executePlayerTurn(choice, target, item) : int
+        + executePlayerTurn(choice, target, item, multiplier) : int
+        + sweepDeadEnemies() : void
+        + drainTurnFrames() : List<TurnFrame>
+        + endRound() : void
+    }
+
+    class "BattleEngine.TurnFrame" as TurnFrame {
+        - message : String
+        - playerDamage : Integer
+        - enemyDamages : List<Integer>
+        - snapshotPlayerHp : int
+        - snapshotEnemyHps : Map<Combatant, Integer>
+        ..
+        + getMessage() : String
+        + getPlayerDamage() : Integer
+        + getEnemyDamages() : List<Integer>
+    }
+
+    class PlayerAction {
+        + bAttack(player, target) : void
+        + defend(player) : void
+        + specialSkill(player, target, enemies) : void
+        + consumeItem(player, target, enemies, item) : void
+    }
+
+    class GameInit {
+        + initPlayers(choice, name) : Player
+        + chooseItems(player, choice) : void
+        + initEnemies(difficulty) : List<List<Combatant>>
+        + initCustomEnemies(opponentType) : List<List<Combatant>>
+        + startGame() : void
+    }
+}
+
+package "arena.engine.controller" #F3E5F5 {
+
+    interface AiTurnController {
+        + resolveTurn(aiPlayer, humanTarget) : AiTurnResult
+    }
+
+    class RandomAiTurnController {
+        - playerAction : PlayerAction
+        - random : Random
+        ..
+        + resolveTurn(aiPlayer, humanTarget) : AiTurnResult
+    }
+
+    class AiTurnResult {
+        - message : String
+        - damageToPlayer : Integer
+        ..
+        + getMessage() : String
+        + getDamageToPlayer() : Integer
+    }
+}
+
+package "arena.engine.mode" #F3E5F5 {
+
+    interface GameMode {
+        + id() : String
+        + initializeEnemies(init, setup) : void
+        + usesQte() : boolean
+    }
+
+    class StandardMode {
+        - difficulty : int
+        ..
+        + id() : String
+        + initializeEnemies(init, setup) : void
+        + usesQte() : boolean
+    }
+
+    class CustomDuelMode {
+        - qteEnabled : boolean
+        ..
+        + id() : String
+        + initializeEnemies(init, setup) : void
+        + usesQte() : boolean
+    }
+
+    class GameModeFactory <<Static>> {
+        + {static} fromSetup(setup) : GameMode
+    }
+}
+
+package "arena.engine.qte" #F3E5F5 {
+
+    interface QtePolicy {
+        + resolveAttackQte() : QteResult
+    }
+
+    class NoOpQtePolicy {
+        + resolveAttackQte() : QteResult
+    }
+
+    class CustomModeQtePolicy {
+        + resolveAttackQte() : QteResult
+    }
+
+    enum QteResult {
+        EARLY
+        NORMAL
+        PERFECT
+        ..
+        + multiplier() : double
+    }
+}
+
+' ═══════════════════════════════════════
+' STRATEGY LAYER
+' ═══════════════════════════════════════
+
+package "arena.strategy" #E3F2FD {
+
+    interface TurnOrderStrategy {
+        + buildTurnOrder(players, enemies) : List<Combatant>
+    }
+
+    class SpeedBasedTurnOrder {
+        + buildTurnOrder(players, enemies) : List<Combatant>
+    }
+
+    interface EnemyActionStrategy {
+        + execute(enemy, players) : void
+    }
+
+    class BasicEnemyActionStrategy {
+        + execute(enemy, players) : void
+    }
+}
+
+' ═══════════════════════════════════════
+' DOMAIN LAYER — Combatants
+' ═══════════════════════════════════════
+
+package "arena.model.combatant" #FFFDE7 {
+
+    abstract class Combatant {
+        - name : String
+        - hp : int
+        - maxHp : int
+        - attack : int
+        - baseDefense : int
+        - speed : int
+        - activeEffects : List<StatusEffect>
+        ..
+        + isAlive() : boolean
+        + takeDamage(amount) : int
+        + takeDamage(amount, attacker) : int
+        + heal(amount) : void
+        + beginTurn() : boolean
+        + addStatusEffect(effect) : void
+        + getDefense() : int
+    }
+
+    abstract class Player {
+        - specialSkillCooldown : int
+        - inventory : List<Item>
+        ..
+        + canUseSpecialSkill() : boolean
+        + useSpecialSkill(enemies, target) : void
+        + triggerSpecialSkillWithoutCooldown(enemies, target) : void
+        + decrementCooldownAfterTurn() : void
+        # {abstract} performSpecialSkill(enemies, target) : void
+        + addItem(item) : void
+        + removeItem(item) : boolean
+    }
+
+    abstract class Enemy {
+        - strategy : EnemyActionStrategy
+        ..
+        + getStrategy() : EnemyActionStrategy
+    }
+
+    class Warrior {
+        HP=260  ATK=40  DEF=20  SPD=30
+        ..
+        # performSpecialSkill(enemies, target) : void
+    }
+
+    class Wizard {
+        HP=200  ATK=50  DEF=10  SPD=20
+        ..
+        # performSpecialSkill(enemies, target) : void
+    }
+
+    class Goblin {
+        HP=55  ATK=35  DEF=15  SPD=25
+    }
+
+    class Wolf {
+        HP=40  ATK=45  DEF=5  SPD=35
+    }
+}
+
+' ═══════════════════════════════════════
+' DOMAIN LAYER — Effects
+' ═══════════════════════════════════════
+
+package "arena.model.effect" #FFFDE7 {
+
+    abstract class StatusEffect {
+        # remainingTurns : int
+        ..
+        + onTurnStart(c) : boolean
+        + modifyDefense(base) : int
+        + modifyIncomingDamage(dmg, src, tgt) : int
+        + isExpired() : boolean
+        + onApply(c) : void
+        + onExpire(c) : void
+    }
+
+    class DefendBuff {
+        - defenseBoost : int
+        ..
+        + modifyDefense(base) : int
+    }
+
+    class StunEffect {
+        DEFAULT_DURATION = 2
+        ..
+        + onTurnStart(c) : boolean
+    }
+
+    class SmokeBombEffect {
+        + modifyIncomingDamage(dmg, src, tgt) : int
+    }
+}
+
+' ═══════════════════════════════════════
+' DOMAIN LAYER — Items
+' ═══════════════════════════════════════
+
+package "arena.model.item" #FFFDE7 {
+
+    abstract class Item {
+        - name : String
+        - description : String
+        ..
+        + getName() : String
+        + {abstract} use(player, enemies, target) : void
+    }
+
+    class Potion {
+        HEAL_AMOUNT = 100
+        ..
+        + use(player, enemies, target) : void
+    }
+
+    class PowerStone {
+        + use(player, enemies, target) : void
+    }
+
+    class SmokeBomb {
+        + use(player, enemies, target) : void
+    }
+}
+
+' ═══════════════════════════════════════
+' DOMAIN LAYER — Actions
+' ═══════════════════════════════════════
+
+package "arena.model.action" #FFFDE7 {
+
+    abstract class Action {
+        - name : String
+        ..
+        + getName() : String
+        + {abstract} execute(actor, target, all) : void
+    }
+
+    class BasicAttack {
+        + execute(actor, target, all) : void
+    }
+
+    class Defend {
+        + execute(actor, target, all) : void
+    }
+
+    class UseItem {
+        - item : Item
+        ..
+        + execute(actor, target, all) : void
+    }
+
+    class UseSpecialSkill {
+        + execute(actor, target, all) : void
+    }
+}
+
+' ═══════════════════════════════════════
+' UI LAYER — Entry & Setup
+' ═══════════════════════════════════════
+
+package "arena.ui" #FCE4EC {
+
+    class GameSetup {
+        + playerClass : String
+        + itemSlot1 : String
+        + itemSlot2 : String
+        + difficulty : String
+        + customOpponentType : String
+        + customQteEnabled : boolean
+        ..
+        + getItemAtSlot(index) : String
+        + setItemAtSlot(index, name) : void
+    }
+
+    class GameStartRequest <<record>> {
+        + setup : GameSetup
+        + fullScreen : boolean
+        + asciiMode : boolean
+    }
+
+    class StartMenu <<Static>> {
+        + {static} launch(screen, gui, ..., onStart) : void
+        + {static} applyUniformButtonTheme(gui) : void
+    }
+
+    class UiPreview <<Static>> {
+        + {static} main(args) : void
+    }
+}
+
+' ═══════════════════════════════════════
+' UI LAYER — View State
+' ═══════════════════════════════════════
+
+package "arena.ui.model" #FCE4EC {
+
+    class ArenaViewStateMapper <<Static>> {
+        + {static} fromGameState(...) : ArenaViewState
+    }
+
+    class ArenaViewState {
+        - playerState : PlayerViewState
+        - aliveEnemies : List<EnemyViewState>
+        - combatLog : List<String>
+        - victory : boolean
+        - defeat : boolean
+        ..
+        + getCurrentTarget() : EnemyViewState
+        + isGameOver() : boolean
+    }
+
+    class PlayerViewState {
+        + name : String
+        + currentHp : int
+        + maxHp : int
+        + attack : int
+        + activeEffects : List<StatusIconViewState>
+        + floatingDamage : Integer
+        + isSpecialSkillAvailable : boolean
+    }
+
+    class EnemyViewState {
+        + name : String
+        + currentHp : int
+        + maxHp : int
+        + isAlive : boolean
+        + floatingDamage : Integer
+        + activeEffects : List<StatusIconViewState>
+        ..
+        + getHpPercent() : int
+    }
+
+    class StatusIconViewState {
+        - effectName : String
+        - remainingTurns : int
+        - iconSymbol : String
+    }
+}
+
+' ═══════════════════════════════════════
+' UI LAYER — Screens
+' ═══════════════════════════════════════
+
+package "arena.ui.screen" #FCE4EC {
+
+    class ArenaBattleScreen {
+        + initialize(screen, gui, ...) : void
+        + setCallbacks(callbacks) : void
+        + render(state) : void
+        + showAndWait(state) : void
+        + setDamageOffsets(player, enemies) : void
+        + close() : void
+    }
+
+    interface ActionCallbacks {
+        + onBasicAttack(targetIndex) : void
+        + onDefend() : void
+        + onUseItem(itemIndex, targetIndex) : void
+        + onSpecialSkill(targetIndex) : void
+        + onBackToMenu() : void
+    }
+
+    class ArenaLayoutCalculator {
+        + calculate(size) : LayoutBounds
+        + getEnemySlotWidth(count, arenaWidth) : int
+    }
+
+    class ArenaPreviewStateFactory <<Static>> {
+        + {static} fromSetup(setup) : ArenaViewState
+    }
+
+    class PlayerSelectionScreen <<Static>> {
+        + {static} open(screen, gui, ..., setup) : int
+    }
+
+    class ItemSelectionScreen <<Static>> {
+        + {static} open(screen, gui, ..., setup) : int
+    }
+
+    class DifficultySelectionScreen <<Static>> {
+        + {static} open(screen, gui, ..., setup) : int
+    }
+
+    class EnemyInformationScreen <<Static>> {
+        + {static} open(screen, gui, ...) : int
+    }
+
+    class CustomModeSetupScreen <<Static>> {
+        + {static} open(screen, gui, ..., setup) : int
+    }
+
+    class EndgameScreen <<Static>> {
+        + {static} show(screen, gui, victory, ..., cb) : void
+    }
+
+    interface EndgameCallbacks {
+        + onReplaySameSettings() : void
+        + onStartNewGame() : void
+        + onQuit() : void
+    }
+
+    class TimingBarQteView <<Static>> {
+        + {static} runAttack(screen, gui) : QteResult
+    }
+}
+
+' ═══════════════════════════════════════
+' UI LAYER — Sprites
+' ═══════════════════════════════════════
+
+package "arena.ui.sprite" #FCE4EC {
+
+    class AsciiSprite {
+        - lines : List<String>
+        - width : int
+        - height : int
+        ..
+        + fits(w, h) : boolean
+        + clipRight(w, h) : AsciiSprite
+        + toMultilineText() : String
+    }
+
+    class SpriteCatalog <<Static>> {
+        + {static} load(folder, name, variant) : AsciiSprite
+        + {static} loadArenaStrip(key, row) : AsciiSprite
+    }
+}
+
+' ═══════════════════════════════════════
+' UI LAYER — Utilities
+' ═══════════════════════════════════════
+
+package "arena.ui.util" #FCE4EC {
+    class CustomBorder
+    class DialogComposer <<Static>>
+    class ResizeHandler
+    class ScreenUtil <<Static>>
+    class TextFormatUtil <<Static>>
+    class ViewMapperUtil <<Static>>
+}
+
+' ═══════════════════════════════════════
+' RELATIONSHIPS
+' ═══════════════════════════════════════
+
+' ── Combatant hierarchy ─────────────────
+Combatant <|-- Player
+Combatant <|-- Enemy
+Player    <|-- Warrior
+Player    <|-- Wizard
+Enemy     <|-- Goblin
+Enemy     <|-- Wolf
+
+' ── Effect hierarchy ────────────────────
+StatusEffect <|-- DefendBuff
+StatusEffect <|-- StunEffect
+StatusEffect <|-- SmokeBombEffect
+
+' ── Item hierarchy ──────────────────────
+Item <|-- Potion
+Item <|-- PowerStone
+Item <|-- SmokeBomb
+
+' ── Action hierarchy ────────────────────
+Action <|-- BasicAttack
+Action <|-- Defend
+Action <|-- UseItem
+Action <|-- UseSpecialSkill
+
+' ── Strategy implementations ────────────
+TurnOrderStrategy    <|..  SpeedBasedTurnOrder
+EnemyActionStrategy  <|..  BasicEnemyActionStrategy
+AiTurnController     <|..  RandomAiTurnController
+QtePolicy            <|..  NoOpQtePolicy
+QtePolicy            <|..  CustomModeQtePolicy
+GameMode             <|..  StandardMode
+GameMode             <|..  CustomDuelMode
+
+' ── Domain compositions ─────────────────
+Combatant "1" *-- "0..*" StatusEffect : activeEffects
+Player    "1" *-- "0..*" Item          : inventory
+Enemy          -->        EnemyActionStrategy : strategy
+
+' ── Action associations ─────────────────
+UseItem         --> Item            : holds
+UseSpecialSkill ..> Player          : casts → useSpecialSkill()
+Defend          ..> DefendBuff      : creates
+SmokeBomb       ..> SmokeBombEffect : creates
+PowerStone      ..> Player          : calls triggerSpecialSkill
+
+' ── Engine core ─────────────────────────
+BattleEngine  -->  GameState
+BattleEngine  -->  PlayerAction
+BattleEngine  -->  AiTurnController
+BattleEngine  *--  TurnFrame
+GameInit      -->  GameState
+
+' ── Engine controller ───────────────────
+AiTurnController       <|..  RandomAiTurnController
+RandomAiTurnController -->   PlayerAction
+RandomAiTurnController ..>   AiTurnResult : creates
+
+' ── Engine mode ─────────────────────────
+GameModeFactory  ..>  GameMode    : creates
+StandardMode     ..>  GameInit    : calls initEnemies
+CustomDuelMode   ..>  GameInit    : calls initCustomEnemies
+
+' ── Engine QTE ──────────────────────────
+NoOpQtePolicy        ..>  QteResult
+CustomModeQtePolicy  ..>  QteResult
+CustomModeQtePolicy  ..>  TimingBarQteView
+
+' ── Strategy usage ──────────────────────
+GameState  ..>  TurnOrderStrategy : uses
+
+' ── GameApp wiring ──────────────────────
+GameApp --> StartMenu
+GameApp --> BattleEngine
+GameApp --> GameInit
+GameApp --> GameModeFactory
+GameApp --> QtePolicy
+GameApp --> ArenaBattleScreen
+GameApp --> ArenaViewStateMapper
+GameApp --> EndgameScreen
+GameApp ..> ActionCallbacks  : implements (anon)
+GameApp ..> EndgameCallbacks : implements (anon)
+
+' ── UI entry ────────────────────────────
+GameStartRequest  *--  GameSetup
+StartMenu         ..>  GameStartRequest : produces
+StartMenu         ..>  PlayerSelectionScreen
+StartMenu         ..>  ItemSelectionScreen
+StartMenu         ..>  DifficultySelectionScreen
+StartMenu         ..>  EnemyInformationScreen
+StartMenu         ..>  CustomModeSetupScreen
+
+' ── UI screen ───────────────────────────
+ArenaBattleScreen    ..>  ActionCallbacks  : uses
+ArenaBattleScreen    -->  ArenaLayoutCalculator
+ArenaBattleScreen    -->  ArenaViewState
+EndgameScreen        ..>  EndgameCallbacks : uses
+ArenaPreviewStateFactory ..> ArenaViewState
+
+' ── UI model ────────────────────────────
+ArenaViewStateMapper  ..>  ArenaViewState : creates
+ArenaViewStateMapper  ..>  GameState
+ArenaViewState        *--  PlayerViewState
+ArenaViewState        *--  EnemyViewState
+PlayerViewState       *--  StatusIconViewState
+EnemyViewState        *--  StatusIconViewState
+
+' ── UI sprite ───────────────────────────
+SpriteCatalog ..> AsciiSprite : loads
+
+@enduml
